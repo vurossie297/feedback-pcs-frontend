@@ -1,0 +1,42 @@
+.input-field {
+  width: 100%;
+  padding: 14px;
+  border-radius: 14px;
+  border: 1px solid #e5e7eb; /* mặc định xám nhạt */
+  font-size: 16px;
+  box-sizing: border-box;
+  transition: border-color 0.2s;
+}
+
+.input-field:focus {
+  border-color: #3b82f6; /* focus xanh nhạt */
+  outline: none;
+}
+
+.input-error {
+  border-color: #dc2626 !important; /* lỗi đỏ */
+}
+.input-field {
+  width: 100%;
+  padding: 14px;
+  border-radius: 14px;
+  border: 1px solid #e5e7eb; /* mặc định xám nhạt */
+  font-size: 16px;
+  box-sizing: border-box;
+  transition: border-color 0.2s;
+  margin-bottom: 12px; /* thêm khoảng cách giữa các ô */
+}
+
+.input-field:focus {
+  border-color: #3b82f6;
+  outline: none;
+}
+
+.input-error {
+  border-color: #dc2626 !important;
+}
+@media (max-width: 480px) {
+  .fullScreen {
+    padding-top: 24px; /* khoảng cách vừa đủ trên mobile */
+  }
+}
