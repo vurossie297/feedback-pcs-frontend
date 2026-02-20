@@ -1,5 +1,5 @@
 import { useParams } from "react-router-dom";
-import { useState, useRef, useEffect } from "react";
+import { useState, useEffect } from "react";
 import "./FeedbackPage.css";
 
 const translations = {
@@ -76,8 +76,9 @@ const translations = {
 };
 
 export default function FeedbackPage() {
-  const { ownerId } = useParams();
-
+  const { ownerId } = useParams(); // slug
+  const [business, setBusiness] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [lang, setLang] = useState("en");
   const [selected, setSelected] = useState(null);
   const [email, setEmail] = useState("");
@@ -87,46 +88,44 @@ export default function FeedbackPage() {
   const [contentError, setContentError] = useState("");
   const [showThanks, setShowThanks] = useState(false);
 
-  const goodRef = useRef(null);
-  const badRef = useRef(null);
+  const t = translations[lang];
 
-  // Quét ngôn ngữ trình duyệt
   useEffect(() => {
+    // quét ngôn ngữ trình duyệt
     const userLang = navigator.language || navigator.userLanguage;
     if (userLang.startsWith("vi")) setLang("vi");
     else if (userLang.startsWith("ja")) setLang("ja");
     else if (userLang.startsWith("zh")) setLang("zh");
     else if (userLang.startsWith("ko")) setLang("ko");
     else setLang("en");
-  }, []);
 
-  const t = translations[lang]; // shortcut
-
-  const statuses = loadStatus();
-  const service = statuses?.find((s) => s.ownerId === ownerId);
-
-  if (!service || !service.serviceActive) {
-    return (
-      <div style={styles.fullScreen}>
-        <div style={styles.centerBox}>🚫 404 error.</div>
-      </div>
-    );
-  }
-
-  const existingFeedbacks = loadFeedbacks() || [];
-  const nextUserNumber = existingFeedbacks.length + 1;
-  const userName = `user${nextUserNumber}`;
+    // load business
+    fetch(`https://feedback-pcs-api.vurossie297.workers.dev/business/${ownerId}`)
+      .then((res) => res.json())
+      .then((data) => {
+        setBusiness(data);
+        setLoading(false);
+      })
+      .catch((err) => {
+        console.error(err);
+        setBusiness(null);
+        setLoading(false);
+      });
+  }, [ownerId]);
 
   const validateEmail = (value) => /^[^\s@]+@[^\s@]+\.[a-zA-Z]{2,}$/.test(value);
-
   const handleEmailChange = (value) => {
     setEmail(value);
     setEmailError(validateEmail(value) ? "" : t.emailError);
   };
-
   const handleContentChange = (value) => {
     setContent(value);
     setContentError(value.trim() ? "" : t.contentError);
+  };
+
+  const handleChoose = (type) => {
+    setSelected(type);
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const handleSubmit = async () => {
@@ -134,7 +133,6 @@ export default function FeedbackPage() {
       setEmailError(t.emailError);
       return;
     }
-
     if (selected === "bad" && !content.trim()) {
       setContentError(t.contentError);
       return;
@@ -145,23 +143,19 @@ export default function FeedbackPage() {
         "https://feedback-pcs-api.vurossie297.workers.dev/api/feedback",
         {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            slug: ownerId, // dùng slug từ URL
+            slug: ownerId,
             rating: selected === "bad" ? stars : 5,
             comment: selected === "good" ? "Positive feedback" : content,
           }),
         }
       );
-
       const data = await response.json();
       console.log(data);
 
-      if (selected === "good") {
-        window.location.href = "https://google.com";
-      } else {
+      if (selected === "good") window.location.href = "https://google.com";
+      else {
         setShowThanks(true);
         setEmail("");
         setContent("");
@@ -169,41 +163,39 @@ export default function FeedbackPage() {
         setSelected(null);
         window.scrollTo({ top: 0, behavior: "smooth" });
       }
-    } catch (error) {
-      console.error(error);
+    } catch (err) {
+      console.error(err);
       alert("API error");
     }
   };
+
   const disableGood = !validateEmail(email);
   const disableBad = !validateEmail(email) || !content.trim();
+
+  if (loading) return <div style={{ padding: 40, textAlign: "center" }}>Loading...</div>;
+  if (!business || business.error) return <div style={{ padding: 40, textAlign: "center" }}>🚫 Business not found</div>;
 
   return (
     <div style={styles.fullScreen}>
       <div style={styles.container}>
-        {/* CARD DỊCH VỤ */}
+        {/* CARD BUSINESS */}
         <div
           style={{
             ...styles.card,
             ...styles.serviceCard,
-            backgroundImage: service.bgImg ? `url(${service.bgImg})` : "none",
+            backgroundImage: business.bgImg ? `url(${business.bgImg})` : "none",
           }}
         >
           <div style={styles.logoWrapper}>
-            {service.logo ? (
-              <img src={service.logo} alt="Logo" style={styles.logo} />
-            ) : (
-              <div style={styles.logoPlaceholder}>Logo</div>
-            )}
+            {business.logo ? <img src={business.logo} alt="Logo" style={styles.logo} /> : <div style={styles.logoPlaceholder}>Logo</div>}
           </div>
-          <h2 style={styles.serviceName}>
-            {service.name || "Tên khách sạn/nhà hàng"}
-          </h2>
+          <h2 style={styles.serviceName}>{business.name}</h2>
         </div>
 
         {/* CARD FEEDBACK */}
         <div style={styles.card}>
-          <h2 style={styles.title}>{service.feedbackTitle || "Đánh giá dịch vụ"}</h2>
-          <p style={styles.subtitle}>{service.feedbackSubtitle || "Bạn cảm thấy dịch vụ thế nào?"}</p>
+          <h2 style={styles.title}>{business.feedbackTitle || "Đánh giá dịch vụ"}</h2>
+          <p style={styles.subtitle}>{business.feedbackSubtitle || "Bạn cảm thấy dịch vụ thế nào?"}</p>
 
           <div style={styles.row}>
             <button style={styles.badBtn(selected)} onClick={() => handleChoose("bad")}>{t.badBtn}</button>
@@ -213,7 +205,7 @@ export default function FeedbackPage() {
 
         {/* GOOD */}
         {selected === "good" && (
-          <div ref={goodRef} style={styles.card}>
+          <div style={styles.card}>
             <h3 style={{ color: "#16a34a" }}>{t.goodTitle}</h3>
             <input
               placeholder={t.emailPlaceholder}
@@ -223,11 +215,7 @@ export default function FeedbackPage() {
             />
             {emailError && <p style={styles.errorText}>{emailError}</p>}
             <button
-              style={{
-                ...styles.primaryBtn,
-                opacity: disableGood ? 0.6 : 1,
-                pointerEvents: disableGood ? "none" : "auto",
-              }}
+              style={{ ...styles.primaryBtn, opacity: disableGood ? 0.6 : 1, pointerEvents: disableGood ? "none" : "auto" }}
               onClick={handleSubmit}
             >
               {t.nextBtn}
@@ -237,7 +225,7 @@ export default function FeedbackPage() {
 
         {/* BAD */}
         {selected === "bad" && (
-          <div ref={badRef} style={styles.card}>
+          <div style={styles.card}>
             <h3 style={{ color: "#dc2626" }}>{t.badTitle}</h3>
 
             <div style={{ marginBottom: 20 }}>
@@ -245,11 +233,7 @@ export default function FeedbackPage() {
                 <span
                   key={n}
                   onClick={() => setStars(n)}
-                  style={{
-                    fontSize: 34,
-                    cursor: "pointer",
-                    color: n <= stars ? "#facc15" : "#e5e7eb",
-                  }}
+                  style={{ fontSize: 34, cursor: "pointer", color: n <= stars ? "#facc15" : "#e5e7eb" }}
                 >★</span>
               ))}
             </div>
@@ -272,11 +256,7 @@ export default function FeedbackPage() {
             {contentError && <p style={styles.errorText}>{contentError}</p>}
 
             <button
-              style={{
-                ...styles.primaryBtn,
-                opacity: disableBad ? 0.6 : 1,
-                pointerEvents: disableBad ? "none" : "auto",
-              }}
+              style={{ ...styles.primaryBtn, opacity: disableBad ? 0.6 : 1, pointerEvents: disableBad ? "none" : "auto" }}
               onClick={handleSubmit}
             >
               {t.sendBtn}
@@ -299,7 +279,6 @@ export default function FeedbackPage() {
   );
 }
 
-/* ================= STYLE ================= */
 const styles = {
   fullScreen: { minHeight: "100vh", background: "#f3f4f6", padding: "30px 16px" },
   container: { maxWidth: 480, margin: "0 auto", display: "flex", flexDirection: "column", gap: 24 },
