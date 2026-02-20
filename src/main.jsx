@@ -25,13 +25,10 @@ ReactDOM.createRoot(document.getElementById("root")).render(
 
         {/* Feedback page */}
         <Route path="/feedback/:ownerId" element={<FeedbackPage />} />
+
+        {/* Route trực tiếp cho demo-restaurant */}
+        <Route path="/demo-restaurant" element={<FeedbackPage ownerId="demo-restaurant" />} />
       </Routes>
     </BrowserRouter>
   </React.StrictMode>
 );
-
-
-
-
-
-

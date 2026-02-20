@@ -1,5 +1,5 @@
 import { useParams } from "react-router-dom";
-import { useState, useEffect } from "react";
+import { useState, useRef, useEffect } from "react";
 import "./FeedbackPage.css";
 
 const translations = {
@@ -75,10 +75,10 @@ const translations = {
   },
 };
 
-export default function FeedbackPage() {
-  const { ownerId } = useParams(); // slug
-  const [business, setBusiness] = useState(null);
-  const [loading, setLoading] = useState(true);
+export default function FeedbackPage({ ownerId: propOwnerId }) {
+  const { ownerId: paramOwnerId } = useParams();
+  const ownerId = propOwnerId || paramOwnerId; // fallback nếu gọi từ route /demo-restaurant
+
   const [lang, setLang] = useState("en");
   const [selected, setSelected] = useState(null);
   const [email, setEmail] = useState("");
@@ -88,36 +88,42 @@ export default function FeedbackPage() {
   const [contentError, setContentError] = useState("");
   const [showThanks, setShowThanks] = useState(false);
 
-  const t = translations[lang];
+  const goodRef = useRef(null);
+  const badRef = useRef(null);
 
   useEffect(() => {
-    // quét ngôn ngữ trình duyệt
     const userLang = navigator.language || navigator.userLanguage;
     if (userLang.startsWith("vi")) setLang("vi");
     else if (userLang.startsWith("ja")) setLang("ja");
     else if (userLang.startsWith("zh")) setLang("zh");
     else if (userLang.startsWith("ko")) setLang("ko");
     else setLang("en");
+  }, []);
 
-    // load business
-    fetch(`https://feedback-pcs-api.vurossie297.workers.dev/business/${ownerId}`)
-      .then((res) => res.json())
-      .then((data) => {
-        setBusiness(data);
-        setLoading(false);
-      })
-      .catch((err) => {
-        console.error(err);
-        setBusiness(null);
-        setLoading(false);
-      });
-  }, [ownerId]);
+  const t = translations[lang];
+
+  // MOCK: load trạng thái dịch vụ (có thể thay bằng call API thực tế)
+  const statuses = [
+    { ownerId: "demo-restaurant", serviceActive: true, logo: null, bgImg: null, name:"Demo Restaurant", feedbackTitle:"Đánh giá dịch vụ", feedbackSubtitle:"Bạn cảm thấy dịch vụ thế nào?" },
+    // Thêm các business khác ở đây nếu cần
+  ];
+  const service = statuses.find((s) => s.ownerId === ownerId);
+
+  if (!service || !service.serviceActive) {
+    return (
+      <div style={styles.fullScreen}>
+        <div style={styles.centerBox}>🚫 404 error.</div>
+      </div>
+    );
+  }
 
   const validateEmail = (value) => /^[^\s@]+@[^\s@]+\.[a-zA-Z]{2,}$/.test(value);
+
   const handleEmailChange = (value) => {
     setEmail(value);
     setEmailError(validateEmail(value) ? "" : t.emailError);
   };
+
   const handleContentChange = (value) => {
     setContent(value);
     setContentError(value.trim() ? "" : t.contentError);
@@ -129,14 +135,8 @@ export default function FeedbackPage() {
   };
 
   const handleSubmit = async () => {
-    if (!validateEmail(email)) {
-      setEmailError(t.emailError);
-      return;
-    }
-    if (selected === "bad" && !content.trim()) {
-      setContentError(t.contentError);
-      return;
-    }
+    if (!validateEmail(email)) { setEmailError(t.emailError); return; }
+    if (selected === "bad" && !content.trim()) { setContentError(t.contentError); return; }
 
     try {
       const response = await fetch(
@@ -157,46 +157,30 @@ export default function FeedbackPage() {
       if (selected === "good") window.location.href = "https://google.com";
       else {
         setShowThanks(true);
-        setEmail("");
-        setContent("");
-        setStars(1);
-        setSelected(null);
+        setEmail(""); setContent(""); setStars(1); setSelected(null);
         window.scrollTo({ top: 0, behavior: "smooth" });
       }
-    } catch (err) {
-      console.error(err);
-      alert("API error");
-    }
+    } catch (error) { console.error(error); alert("API error"); }
   };
 
   const disableGood = !validateEmail(email);
   const disableBad = !validateEmail(email) || !content.trim();
 
-  if (loading) return <div style={{ padding: 40, textAlign: "center" }}>Loading...</div>;
-  if (!business || business.error) return <div style={{ padding: 40, textAlign: "center" }}>🚫 Business not found</div>;
-
   return (
     <div style={styles.fullScreen}>
       <div style={styles.container}>
-        {/* CARD BUSINESS */}
-        <div
-          style={{
-            ...styles.card,
-            ...styles.serviceCard,
-            backgroundImage: business.bgImg ? `url(${business.bgImg})` : "none",
-          }}
-        >
+        {/* CARD DỊCH VỤ */}
+        <div style={{...styles.card, ...styles.serviceCard, backgroundImage: service.bgImg ? `url(${service.bgImg})` : "none"}}>
           <div style={styles.logoWrapper}>
-            {business.logo ? <img src={business.logo} alt="Logo" style={styles.logo} /> : <div style={styles.logoPlaceholder}>Logo</div>}
+            {service.logo ? <img src={service.logo} alt="Logo" style={styles.logo} /> : <div style={styles.logoPlaceholder}>Logo</div>}
           </div>
-          <h2 style={styles.serviceName}>{business.name}</h2>
+          <h2 style={styles.serviceName}>{service.name}</h2>
         </div>
 
         {/* CARD FEEDBACK */}
         <div style={styles.card}>
-          <h2 style={styles.title}>{business.feedbackTitle || "Đánh giá dịch vụ"}</h2>
-          <p style={styles.subtitle}>{business.feedbackSubtitle || "Bạn cảm thấy dịch vụ thế nào?"}</p>
-
+          <h2 style={styles.title}>{service.feedbackTitle}</h2>
+          <p style={styles.subtitle}>{service.feedbackSubtitle}</p>
           <div style={styles.row}>
             <button style={styles.badBtn(selected)} onClick={() => handleChoose("bad")}>{t.badBtn}</button>
             <button style={styles.goodBtn(selected)} onClick={() => handleChoose("good")}>{t.goodBtn}</button>
@@ -205,62 +189,28 @@ export default function FeedbackPage() {
 
         {/* GOOD */}
         {selected === "good" && (
-          <div style={styles.card}>
+          <div ref={goodRef} style={styles.card}>
             <h3 style={{ color: "#16a34a" }}>{t.goodTitle}</h3>
-            <input
-              placeholder={t.emailPlaceholder}
-              value={email}
-              onChange={(e) => handleEmailChange(e.target.value)}
-              className={`input-field ${emailError ? "input-error" : ""}`}
-            />
+            <input placeholder={t.emailPlaceholder} value={email} onChange={(e) => handleEmailChange(e.target.value)} className={`input-field ${emailError ? "input-error" : ""}`} />
             {emailError && <p style={styles.errorText}>{emailError}</p>}
-            <button
-              style={{ ...styles.primaryBtn, opacity: disableGood ? 0.6 : 1, pointerEvents: disableGood ? "none" : "auto" }}
-              onClick={handleSubmit}
-            >
-              {t.nextBtn}
-            </button>
+            <button style={{...styles.primaryBtn, opacity:disableGood?0.6:1, pointerEvents:disableGood?"none":"auto"}} onClick={handleSubmit}>{t.nextBtn}</button>
           </div>
         )}
 
         {/* BAD */}
         {selected === "bad" && (
-          <div style={styles.card}>
+          <div ref={badRef} style={styles.card}>
             <h3 style={{ color: "#dc2626" }}>{t.badTitle}</h3>
-
             <div style={{ marginBottom: 20 }}>
               {[1,2,3,4,5].map(n => (
-                <span
-                  key={n}
-                  onClick={() => setStars(n)}
-                  style={{ fontSize: 34, cursor: "pointer", color: n <= stars ? "#facc15" : "#e5e7eb" }}
-                >★</span>
+                <span key={n} onClick={() => setStars(n)} style={{ fontSize:34, cursor:"pointer", color: n<=stars?"#facc15":"#e5e7eb"}}>★</span>
               ))}
             </div>
-
-            <input
-              placeholder={t.emailPlaceholder}
-              value={email}
-              onChange={(e) => handleEmailChange(e.target.value)}
-              className={`input-field ${emailError ? "input-error" : ""}`}
-            />
+            <input placeholder={t.emailPlaceholder} value={email} onChange={(e) => handleEmailChange(e.target.value)} className={`input-field ${emailError ? "input-error" : ""}`} />
             {emailError && <p style={styles.errorText}>{emailError}</p>}
-
-            <textarea
-              placeholder={t.contentPlaceholder}
-              value={content}
-              onChange={(e) => handleContentChange(e.target.value)}
-              className={`input-field ${contentError ? "input-error" : ""}`}
-              style={{ height: 100 }}
-            />
+            <textarea placeholder={t.contentPlaceholder} value={content} onChange={(e) => handleContentChange(e.target.value)} className={`input-field ${contentError ? "input-error" : ""}`} style={{ height:100 }} />
             {contentError && <p style={styles.errorText}>{contentError}</p>}
-
-            <button
-              style={{ ...styles.primaryBtn, opacity: disableBad ? 0.6 : 1, pointerEvents: disableBad ? "none" : "auto" }}
-              onClick={handleSubmit}
-            >
-              {t.sendBtn}
-            </button>
+            <button style={{...styles.primaryBtn, opacity:disableBad?0.6:1, pointerEvents:disableBad?"none":"auto"}} onClick={handleSubmit}>{t.sendBtn}</button>
           </div>
         )}
 
@@ -280,20 +230,14 @@ export default function FeedbackPage() {
 }
 
 const styles = {
-  fullScreen: { minHeight: "100vh", background: "#f3f4f6", padding: "30px 16px" },
-  container: { maxWidth: 480, margin: "0 auto", display: "flex", flexDirection: "column", gap: 24 },
-  card: { background: "white", borderRadius: 20, padding: 28, boxShadow: "0 8px 24px rgba(0,0,0,0.06)" },
-  title: { textAlign: "center", marginBottom: 12, fontSize: 20 },
-  subtitle: { textAlign: "center", marginBottom: 24, color: "#6b7280", fontSize: 15 },
-  row: { display: "flex", gap: 16 },
-  goodBtn: (selected) => ({
-    flex:1, padding:16, borderRadius:999, fontWeight:600, cursor:"pointer",
-    border:"2px solid #16a34a", background:selected==="good"?"#dcfce7":"#fff", color:"#16a34a"
-  }),
-  badBtn: (selected) => ({
-    flex:1, padding:16, borderRadius:999, fontWeight:600, cursor:"pointer",
-    border:"2px solid #dc2626", background:selected==="bad"?"#fee2e2":"#fff", color:"#dc2626"
-  }),
+  fullScreen: { minHeight:"100vh", background:"#f3f4f6", padding:"30px 16px" },
+  container: { maxWidth:480, margin:"0 auto", display:"flex", flexDirection:"column", gap:24 },
+  card: { background:"white", borderRadius:20, padding:28, boxShadow:"0 8px 24px rgba(0,0,0,0.06)" },
+  title: { textAlign:"center", marginBottom:12, fontSize:20 },
+  subtitle: { textAlign:"center", marginBottom:24, color:"#6b7280", fontSize:15 },
+  row: { display:"flex", gap:16 },
+  goodBtn: (selected)=>({ flex:1,padding:16,borderRadius:999,fontWeight:600,cursor:"pointer",border:"2px solid #16a34a",background:selected==="good"?"#dcfce7":"#fff",color:"#16a34a" }),
+  badBtn: (selected)=>({ flex:1,padding:16,borderRadius:999,fontWeight:600,cursor:"pointer",border:"2px solid #dc2626",background:selected==="bad"?"#fee2e2":"#fff",color:"#dc2626" }),
   primaryBtn: { width:"100%", padding:16, borderRadius:14, border:"none", background:"#5392f9", color:"white", fontWeight:600, cursor:"pointer" },
   errorText: { color:"#dc2626", fontSize:14, marginBottom:10 },
   centerBox: { maxWidth:480, margin:"0 auto", background:"white", padding:30, borderRadius:20, textAlign:"center" },
