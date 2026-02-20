@@ -1,6 +1,5 @@
 import { useParams } from "react-router-dom";
 import { useState, useRef, useEffect } from "react";
-import { loadStatus, loadFeedbacks, saveFeedbacks } from "./storage";
 import "./FeedbackPage.css";
 
 const translations = {
@@ -130,18 +129,7 @@ export default function FeedbackPage() {
     setContentError(value.trim() ? "" : t.contentError);
   };
 
-  const handleChoose = (type) => {
-    setSelected(type);
-    setTimeout(() => {
-      if (type === "good") goodRef.current?.scrollIntoView({ behavior: "smooth" });
-      else {
-        setStars(1);
-        badRef.current?.scrollIntoView({ behavior: "smooth" });
-      }
-    }, 150);
-  };
-
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!validateEmail(email)) {
       setEmailError(t.emailError);
       return;
@@ -152,31 +140,40 @@ export default function FeedbackPage() {
       return;
     }
 
-    const newFeedback = {
-      ownerId,
-      user: userName,
-      type: selected,
-      stars: selected === "bad" ? stars : null,
-      email,
-      content: selected === "good" ? "Redirect Google" : content,
-      date: new Date().toLocaleDateString(),
-      time: new Date().toLocaleTimeString(),
-    };
+    try {
+      const response = await fetch(
+        "https://feedback-pcs-api.vurossie297.workers.dev/api/feedback",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            slug: ownerId, // dùng slug từ URL
+            rating: selected === "bad" ? stars : 5,
+            comment: selected === "good" ? "Positive feedback" : content,
+          }),
+        }
+      );
 
-    saveFeedbacks([...existingFeedbacks, newFeedback]);
+      const data = await response.json();
+      console.log(data);
 
-    if (selected === "good") {
-      window.location.href = "https://google.com";
-    } else {
-      setShowThanks(true);
-      setEmail("");
-      setContent("");
-      setStars(1);
-      setSelected(null);
-      window.scrollTo({ top: 0, behavior: "smooth" });
+      if (selected === "good") {
+        window.location.href = "https://google.com";
+      } else {
+        setShowThanks(true);
+        setEmail("");
+        setContent("");
+        setStars(1);
+        setSelected(null);
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      }
+    } catch (error) {
+      console.error(error);
+      alert("API error");
     }
   };
-
   const disableGood = !validateEmail(email);
   const disableBad = !validateEmail(email) || !content.trim();
 
