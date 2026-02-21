@@ -77,7 +77,7 @@ const translations = {
 
 export default function FeedbackPage({ ownerId: propOwnerId }) {
   const { ownerId: paramOwnerId } = useParams();
-  const ownerId = propOwnerId || paramOwnerId;
+  const ownerId = propOwnerId || paramOwnerId; // fallback nếu gọi từ route /demo-restaurant
 
   const [lang, setLang] = useState("en");
   const [selected, setSelected] = useState(null);
@@ -87,9 +87,6 @@ export default function FeedbackPage({ ownerId: propOwnerId }) {
   const [content, setContent] = useState("");
   const [contentError, setContentError] = useState("");
   const [showThanks, setShowThanks] = useState(false);
-
-  const [service, setService] = useState(null);
-  const [loading, setLoading] = useState(true);
 
   const goodRef = useRef(null);
   const badRef = useRef(null);
@@ -103,31 +100,14 @@ export default function FeedbackPage({ ownerId: propOwnerId }) {
     else setLang("en");
   }, []);
 
-  useEffect(() => {
-    async function fetchService() {
-      try {
-        const res = await fetch(`https://feedback-pcs-api.vurossie297.workers.dev/api/business/${ownerId}`);
-        if (!res.ok) throw new Error("Business not found");
-        const data = await res.json();
-        setService({ ...data, serviceActive: true });
-      } catch {
-        setService({ serviceActive: false });
-      } finally {
-        setLoading(false);
-      }
-    }
-    fetchService();
-  }, [ownerId]);
-
   const t = translations[lang];
 
-  if (loading) {
-    return (
-      <div style={styles.fullScreen}>
-        <div style={styles.centerBox}>Loading...</div>
-      </div>
-    );
-  }
+  // MOCK: load trạng thái dịch vụ (có thể thay bằng call API thực tế)
+  const statuses = [
+    { ownerId: "demo-restaurant", serviceActive: true, logo: null, bgImg: null, name:"Demo Restaurant", feedbackTitle:"Đánh giá dịch vụ", feedbackSubtitle:"Bạn cảm thấy dịch vụ thế nào?" },
+    // Thêm các business khác ở đây nếu cần
+  ];
+  const service = statuses.find((s) => s.ownerId === ownerId);
 
   if (!service || !service.serviceActive) {
     return (
@@ -189,6 +169,7 @@ export default function FeedbackPage({ ownerId: propOwnerId }) {
   return (
     <div style={styles.fullScreen}>
       <div style={styles.container}>
+        {/* CARD DỊCH VỤ */}
         <div style={{...styles.card, ...styles.serviceCard, backgroundImage: service.bgImg ? `url(${service.bgImg})` : "none"}}>
           <div style={styles.logoWrapper}>
             {service.logo ? <img src={service.logo} alt="Logo" style={styles.logo} /> : <div style={styles.logoPlaceholder}>Logo</div>}
@@ -196,6 +177,7 @@ export default function FeedbackPage({ ownerId: propOwnerId }) {
           <h2 style={styles.serviceName}>{service.name}</h2>
         </div>
 
+        {/* CARD FEEDBACK */}
         <div style={styles.card}>
           <h2 style={styles.title}>{service.feedbackTitle}</h2>
           <p style={styles.subtitle}>{service.feedbackSubtitle}</p>
@@ -205,6 +187,7 @@ export default function FeedbackPage({ ownerId: propOwnerId }) {
           </div>
         </div>
 
+        {/* GOOD */}
         {selected === "good" && (
           <div ref={goodRef} style={styles.card}>
             <h3 style={{ color: "#16a34a" }}>{t.goodTitle}</h3>
@@ -214,6 +197,7 @@ export default function FeedbackPage({ ownerId: propOwnerId }) {
           </div>
         )}
 
+        {/* BAD */}
         {selected === "bad" && (
           <div ref={badRef} style={styles.card}>
             <h3 style={{ color: "#dc2626" }}>{t.badTitle}</h3>
@@ -230,6 +214,7 @@ export default function FeedbackPage({ ownerId: propOwnerId }) {
           </div>
         )}
 
+        {/* POPUP THANKS */}
         {showThanks && (
           <div style={styles.popupOverlay}>
             <div style={styles.popup}>
