@@ -25,7 +25,6 @@ export default function DashboardAdmin() {
   const [newOwnerId, setNewOwnerId] = useState("");
   const [newOwnerPass, setNewOwnerPass] = useState("");
 
-  
   useEffect(() => {
     setOwnerList(loadOwners());
     setRequests(loadRequests());
@@ -38,7 +37,7 @@ export default function DashboardAdmin() {
     setShowCreateModal(true);
   };
 
-  const handleCreateOwnerFromModal = () => {
+  const handleCreateOwnerFromModal = async () => {
     if (!newOwnerId) return alert("ID không được để trống");
     if (ownerList.find(o => o.id === newOwnerId)) return alert("Owner ID đã tồn tại!");
     if (!newOwnerPass) return alert("Password không được để trống");
@@ -62,9 +61,30 @@ export default function DashboardAdmin() {
     setStatusList(updatedStatus);
     saveStatus(updatedStatus);
 
-    // Thay alert trong handleCreateOwnerFromModal
     showSuccess(`✅ Tạo Owner thành công: ${newOwnerId}`);
     setShowCreateModal(false);
+
+    // === BỔ SUNG API CALL để Owner live luôn ===
+    try {
+      // Tạo Owner trên server
+      await fetch("/api/owners", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: newOwnerId, password: newOwnerPass }),
+      });
+
+      // Tạo Status trên server
+      await fetch("/api/status", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newStatus),
+      });
+
+      console.log(`Owner ${newOwnerId} live trên server.`);
+    } catch (err) {
+      console.error("Lỗi khi tạo Owner trên server:", err);
+    }
+    // === END BỔ SUNG ===
   };
 
   const handleApprove = (req) => {
@@ -78,10 +98,10 @@ export default function DashboardAdmin() {
       saveStatus(updated);
       return updated;
     });
-    // Hiển thị modal success
     setRequestSuccessMessage(`✅ Đã duyệt dịch vụ cho ${req.ownerId}`);
     setShowRequestSuccessModal(true);
   };
+
   const openRejectModal = (ownerId) => {
     setOwnerToReject(ownerId);
     setRejectReason(""); // reset
@@ -102,11 +122,11 @@ export default function DashboardAdmin() {
     setSuccessMessage(`❌ Đã từ chối ${ownerToReject}`);
     setShowSuccessModal(true);
 
-    // Reset modal
     setOwnerToReject(null);
     setRejectReason("");
     setShowRejectModal(false);
   };
+
   const toggleService = (ownerId) => {
     setStatusList(prev => {
       const updated = prev.map(s => s.ownerId === ownerId ? { ...s, serviceActive: !s.serviceActive } : s);
@@ -132,29 +152,22 @@ export default function DashboardAdmin() {
   };
 
   const openDeleteModal = (ownerId) => {
-  setOwnerToDelete(ownerId);
-  setShowDeleteModal(true);
-};
+    setOwnerToDelete(ownerId);
+    setShowDeleteModal(true);
+  };
 
   const handleConfirmDelete = () => {
     if (!ownerToDelete) return;
 
-    // Xoá owner khỏi ownerList
     const updatedOwners = ownerList.filter(o => o.id !== ownerToDelete);
     setOwnerList(updatedOwners);
     saveOwners(updatedOwners);
 
-    // Xoá trạng thái của owner đó
     const updatedStatus = statusList.filter(s => s.ownerId !== ownerToDelete);
     setStatusList(updatedStatus);
     saveStatus(updatedStatus);
 
-    // Hiển thị modal thông báo thành công
-    // Thêm showSuccess sau khi xoá
     showSuccess(`✅ Đã xoá Owner: ${ownerToDelete}`);
-    setShowSuccessModal(true);
-
-    // Đóng modal xác nhận xoá
     setShowDeleteModal(false);
     setOwnerToDelete(null);
   };
@@ -185,7 +198,6 @@ export default function DashboardAdmin() {
       const finalStatusList = statusList.map(s => s.ownerId === editingOwnerId ? serviceEditing : s);
       setStatusList(finalStatusList);
       saveStatus(finalStatusList);
-      // Thay alert cuối finalizeSave
       showSuccess(`✅ Lưu ${editingOwnerId} thành công!`);
       setEditingOwnerId(null);
       setServiceEditing(null);
@@ -194,19 +206,19 @@ export default function DashboardAdmin() {
     };
     saveFiles();
   };
+
   const showSuccess = (message) => {
     setSuccessMessage(message);
     setShowSuccessModal(true);
   };
 
+  // --- RETURN JSX (giữ nguyên hoàn toàn) ---
   return (
     <div className="dashboard-container">
       <h2 className="dashboard-title">PCS ADMIN</h2>
 
-      {/* Nút mở modal */}
       <button className="create-owner-btn" onClick={openCreateModal}>➕ Tạo Owner mới</button>
 
-      {/* Modal tạo Owner */}
       {showCreateModal && (
         <div className="modal-overlay">
           <div className="modal">
@@ -223,7 +235,6 @@ export default function DashboardAdmin() {
         </div>
       )}
 
-      {/* Owner List */}
       <h3>Owner List</h3>
       <table className="table-hover">
         <thead>
@@ -247,7 +258,6 @@ export default function DashboardAdmin() {
         </tbody>
       </table>
 
-      {/* Modal Xác nhận Xoá Owner */}
       {showDeleteModal && (
         <div className="modal-overlay">
           <div className="modal">
@@ -282,7 +292,6 @@ export default function DashboardAdmin() {
         </div>
       )}
 
-      {/* Model từ chối service */}
       {showRejectModal && (
         <div className="modal-overlay">
           <div className="modal">
@@ -301,7 +310,7 @@ export default function DashboardAdmin() {
           </div>
         </div>
       )}
-      {/* Chỉnh sửa Owner */}
+
       {editingOwnerId && serviceEditing && (
         <div className="edit-owner-form">
           <h3>Chỉnh sửa Owner: {editingOwnerId}</h3>
@@ -326,7 +335,6 @@ export default function DashboardAdmin() {
         </div>
       )}
 
-      {/* Upgrade Requests */}
       <h3>Upgrade Requests</h3>
       <table className="table-hover">
         <thead>
@@ -358,7 +366,6 @@ export default function DashboardAdmin() {
         </tbody>
       </table>
 
-      {/* Service Status */}
       <h3>Service Status</h3>
       <table className="table-hover">
         <thead>
