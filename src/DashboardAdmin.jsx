@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { loadRequests, saveRequests, loadStatus, saveStatus, loadOwners, saveOwners } from "./storage";
 import "./DashboardAdmin.css"; // CSS hover + modal
+import { syncOwnerToWorker } from "./dashboardAdminExtras";
+
 
 export default function DashboardAdmin() {
   const [ownerList, setOwnerList] = useState([]);
@@ -60,6 +62,9 @@ export default function DashboardAdmin() {
     const updatedStatus = [...statusList, newStatus];
     setStatusList(updatedStatus);
     saveStatus(updatedStatus);
+
+    // ✅ Bổ sung: Sync Owner lên Worker để feedback page live
+    syncOwnerToWorker(newStatus);
 
     showSuccess(`✅ Tạo Owner thành công: ${newOwnerId}`);
     setShowCreateModal(false);
