@@ -20,10 +20,12 @@ export default function DashboardAdmin() {
   const [ownerToReject, setOwnerToReject] = useState(null);
   const [rejectReason, setRejectReason] = useState("");
 
+  // Modal tạo Owner
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newOwnerId, setNewOwnerId] = useState("");
   const [newOwnerPass, setNewOwnerPass] = useState("");
 
+  
   useEffect(() => {
     setOwnerList(loadOwners());
     setRequests(loadRequests());
@@ -60,6 +62,7 @@ export default function DashboardAdmin() {
     setStatusList(updatedStatus);
     saveStatus(updatedStatus);
 
+    // Thay alert trong handleCreateOwnerFromModal
     showSuccess(`✅ Tạo Owner thành công: ${newOwnerId}`);
     setShowCreateModal(false);
   };
@@ -75,13 +78,13 @@ export default function DashboardAdmin() {
       saveStatus(updated);
       return updated;
     });
+    // Hiển thị modal success
     setRequestSuccessMessage(`✅ Đã duyệt dịch vụ cho ${req.ownerId}`);
     setShowRequestSuccessModal(true);
   };
-
   const openRejectModal = (ownerId) => {
     setOwnerToReject(ownerId);
-    setRejectReason(""); 
+    setRejectReason(""); // reset
     setShowRejectModal(true);
   };
   
@@ -96,12 +99,14 @@ export default function DashboardAdmin() {
       return updated;
     });
 
-    showSuccess(`❌ Đã từ chối ${ownerToReject}`);
-    setShowRejectModal(false);
+    setSuccessMessage(`❌ Đã từ chối ${ownerToReject}`);
+    setShowSuccessModal(true);
+
+    // Reset modal
     setOwnerToReject(null);
     setRejectReason("");
+    setShowRejectModal(false);
   };
-
   const toggleService = (ownerId) => {
     setStatusList(prev => {
       const updated = prev.map(s => s.ownerId === ownerId ? { ...s, serviceActive: !s.serviceActive } : s);
@@ -127,19 +132,29 @@ export default function DashboardAdmin() {
   };
 
   const openDeleteModal = (ownerId) => {
-    setOwnerToDelete(ownerId);
-    setShowDeleteModal(true);
-  };
+  setOwnerToDelete(ownerId);
+  setShowDeleteModal(true);
+};
 
   const handleConfirmDelete = () => {
     if (!ownerToDelete) return;
+
+    // Xoá owner khỏi ownerList
     const updatedOwners = ownerList.filter(o => o.id !== ownerToDelete);
     setOwnerList(updatedOwners);
     saveOwners(updatedOwners);
+
+    // Xoá trạng thái của owner đó
     const updatedStatus = statusList.filter(s => s.ownerId !== ownerToDelete);
     setStatusList(updatedStatus);
     saveStatus(updatedStatus);
+
+    // Hiển thị modal thông báo thành công
+    // Thêm showSuccess sau khi xoá
     showSuccess(`✅ Đã xoá Owner: ${ownerToDelete}`);
+    setShowSuccessModal(true);
+
+    // Đóng modal xác nhận xoá
     setShowDeleteModal(false);
     setOwnerToDelete(null);
   };
@@ -170,6 +185,7 @@ export default function DashboardAdmin() {
       const finalStatusList = statusList.map(s => s.ownerId === editingOwnerId ? serviceEditing : s);
       setStatusList(finalStatusList);
       saveStatus(finalStatusList);
+      // Thay alert cuối finalizeSave
       showSuccess(`✅ Lưu ${editingOwnerId} thành công!`);
       setEditingOwnerId(null);
       setServiceEditing(null);
@@ -178,78 +194,95 @@ export default function DashboardAdmin() {
     };
     saveFiles();
   };
-
   const showSuccess = (message) => {
     setSuccessMessage(message);
     setShowSuccessModal(true);
   };
 
-  // Style nút kiểu Agoda
-  const agodaBtnStyle = { fontSize: "16px", fontWeight: 500, padding: "10px 18px" };
-
   return (
     <div className="dashboard-container">
       <h2 className="dashboard-title">PCS ADMIN</h2>
+
+      {/* Nút mở modal */}
       <button className="create-owner-btn" onClick={openCreateModal}>➕ Tạo Owner mới</button>
 
-      {/* Modal Tạo Owner */}
+      {/* Modal tạo Owner */}
       {showCreateModal && (
         <div className="modal-overlay">
           <div className="modal">
             <h3>Tạo Owner mới</h3>
-            <label>Owner ID:</label>
+            <label className="label-owner-id">Owner ID:</label>
             <input type="text" value={newOwnerId} onChange={e => setNewOwnerId(e.target.value)} />
-            <label>Password:</label>
+            <label className="label-owner-pass">Password:</label>
             <input type="password" value={newOwnerPass} onChange={e => setNewOwnerPass(e.target.value)} />
             <div className="modal-actions">
-              <button className="primary-btn" style={agodaBtnStyle} onClick={handleCreateOwnerFromModal}>はい</button>
-              <button className="secondary-btn" style={agodaBtnStyle} onClick={() => setShowCreateModal(false)}>いいえ</button>
+              <button className="primary-btn" onClick={handleCreateOwnerFromModal}>Tạo</button>
+              <button className="secondary-btn" onClick={() => setShowCreateModal(false)}>Hủy</button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Modal Xác nhận Xoá */}
+      {/* Owner List */}
+      <h3>Owner List</h3>
+      <table className="table-hover">
+        <thead>
+          <tr>
+            <th>Owner ID</th>
+            <th>Password</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {ownerList.map((o, idx) => (
+            <tr key={idx}>
+              <td>{o.id}</td>
+              <td>{o.password}</td>
+              <td>
+                <button className="secondary-btn action-btn" onClick={() => handleEditOwner(o.id)}>Chỉnh sửa</button>
+                <button className="delete-btn action-btn" onClick={() => openDeleteModal(o.id)}>Xoá</button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+      {/* Modal Xác nhận Xoá Owner */}
       {showDeleteModal && (
         <div className="modal-overlay">
           <div className="modal">
             <h3>Xác nhận xoá Owner</h3>
             <p>Bạn có chắc muốn xoá: <b>{ownerToDelete}</b> không?</p>
-            <div className="modal-actions">
-              <button className="primary-btn" style={agodaBtnStyle} onClick={handleConfirmDelete}>はい</button>
-              <button className="secondary-btn" style={agodaBtnStyle} onClick={() => setShowDeleteModal(false)}>いいえ</button>
+            <div className="modal-actions .confirm-modal button">
+              <button className="primary-btn" onClick={handleConfirmDelete}>Xác nhận</button>
+              <button className="secondary-btn" onClick={() => setShowDeleteModal(false)}>Hủy</button>
             </div>
           </div>
         </div>
-      )}
+      )}    
 
-      {/* Modal Success */}
       {showSuccessModal && (
         <div className="modal-overlay">
           <div className="modal">
             <p>{successMessage}</p>
             <div className="modal-actions">
-              <button className="primary-btn" style={agodaBtnStyle} onClick={() => setShowSuccessModal(false)}>はい</button>
-              <button className="secondary-btn" style={agodaBtnStyle} onClick={() => setShowSuccessModal(false)}>いいえ</button>
+              <button className="primary-btn" onClick={() => setShowSuccessModal(false)}>OK</button>
             </div>
           </div>
         </div>
       )}
-
-      {/* Modal Request Success */}
       {showRequestSuccessModal && (
         <div className="modal-overlay">
           <div className="modal">
             <p>{requestSuccessMessage}</p>
             <div className="modal-actions">
-              <button className="primary-btn" style={agodaBtnStyle} onClick={() => setShowRequestSuccessModal(false)}>はい</button>
-              <button className="secondary-btn" style={agodaBtnStyle} onClick={() => setShowRequestSuccessModal(false)}>いいえ</button>
+              <button className="primary-btn" onClick={() => setShowRequestSuccessModal(false)}>OK</button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Modal Từ chối */}
+      {/* Model từ chối service */}
       {showRejectModal && (
         <div className="modal-overlay">
           <div className="modal">
@@ -261,32 +294,35 @@ export default function DashboardAdmin() {
               rows={4}
               style={{ width: "100%", padding: "8px", marginBottom: "16px", borderRadius: "6px", border: "1px solid #aaa" }}
             />
-            <div className="modal-actions">
-              <button className="primary-btn" style={agodaBtnStyle} onClick={handleConfirmReject}>はい</button>
-              <button className="secondary-btn" style={agodaBtnStyle} onClick={() => setShowRejectModal(false)}>いいえ</button>
+            <div className="modal-actions confirm-modal">
+              <button className="primary-btn" onClick={handleConfirmReject}>Xác nhận</button>
+              <button className="secondary-btn" onClick={() => setShowRejectModal(false)}>Hủy</button>
             </div>
           </div>
         </div>
       )}
-
       {/* Chỉnh sửa Owner */}
       {editingOwnerId && serviceEditing && (
         <div className="edit-owner-form">
           <h3>Chỉnh sửa Owner: {editingOwnerId}</h3>
           <label>Tên khách sạn / nhà hàng</label>
           <input type="text" value={serviceEditing.name || ""} onChange={e => setServiceEditing(prev => ({ ...prev, name: e.target.value }))} />
+
           <label>Logo tròn</label>
           <input type="file" accept="image/*" onChange={e => setLogoFile(e.target.files[0])} />
           {serviceEditing.logo && <img src={serviceEditing.logo} alt="logo" className="preview-img" />}
+
           <label>Ảnh nền card</label>
           <input type="file" accept="image/*" onChange={e => setBgFile(e.target.files[0])} />
           {serviceEditing.bgImg && <img src={serviceEditing.bgImg} alt="background" className="preview-img bg-img" />}
+
           <label>Text tiêu đề feedback</label>
           <input type="text" value={serviceEditing.feedbackTitle || ""} onChange={e => setServiceEditing(prev => ({ ...prev, feedbackTitle: e.target.value }))} />
+
           <label>Text câu hỏi feedback</label>
           <input type="text" value={serviceEditing.feedbackSubtitle || ""} onChange={e => setServiceEditing(prev => ({ ...prev, feedbackSubtitle: e.target.value }))} />
-          <button className="primary-btn" style={agodaBtnStyle} onClick={handleSaveEditing}>はい</button>
-          <button className="secondary-btn" style={agodaBtnStyle} onClick={() => setEditingOwnerId(null)}>いいえ</button>
+
+          <button className="primary-btn" onClick={handleSaveEditing}>Lưu thay đổi</button>
         </div>
       )}
 
@@ -312,8 +348,8 @@ export default function DashboardAdmin() {
               <td>
                 {req.status === "pending" ? (
                   <>
-                    <button className="secondary-btn small-btn" style={agodaBtnStyle} onClick={() => handleApprove(req)}>はい</button>
-                    <button className="secondary-btn small-btn" style={agodaBtnStyle} onClick={() => openRejectModal(req.ownerId)}>いいえ</button>
+                    <button className="secondary-btn small-btn action-btn " onClick={() => handleApprove(req)}>Approve</button>
+                    <button className="secondary-btn small-btn action-btn" onClick={() => openRejectModal(req.ownerId)}>Reject</button>
                   </>
                 ) : "—"}
               </td>
@@ -340,8 +376,8 @@ export default function DashboardAdmin() {
               <td>{s.serviceActive ? "✅" : "❌"}</td>
               <td>{s.packageActive ? "✅" : "❌"}</td>
               <td>
-                <button className="secondary-btn small-btn" style={agodaBtnStyle} onClick={() => toggleService(s.ownerId)}>Service</button>
-                <button className="secondary-btn small-btn" style={agodaBtnStyle} onClick={() => togglePackage(s.ownerId)}>Package</button>
+                <button className="secondary-btn small-btn action-btn" onClick={() => toggleService(s.ownerId)}>Service</button>
+                <button className="secondary-btn small-btn action-btn" onClick={() => togglePackage(s.ownerId)}>Package</button>
               </td>
             </tr>
           ))}
