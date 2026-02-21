@@ -1,3 +1,4 @@
+// FeedbackPage.jsx (chỉnh sửa để load owner từ API Worker)
 import { useParams } from "react-router-dom";
 import { useState, useRef, useEffect } from "react";
 import "./FeedbackPage.css";
@@ -77,7 +78,7 @@ const translations = {
 
 export default function FeedbackPage({ ownerId: propOwnerId }) {
   const { ownerId: paramOwnerId } = useParams();
-  const ownerId = propOwnerId || paramOwnerId; // fallback nếu gọi từ route /demo-restaurant
+  const ownerId = propOwnerId || paramOwnerId;
 
   const [lang, setLang] = useState("en");
   const [selected, setSelected] = useState(null);
@@ -87,6 +88,8 @@ export default function FeedbackPage({ ownerId: propOwnerId }) {
   const [content, setContent] = useState("");
   const [contentError, setContentError] = useState("");
   const [showThanks, setShowThanks] = useState(false);
+  const [service, setService] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   const goodRef = useRef(null);
   const badRef = useRef(null);
@@ -102,37 +105,36 @@ export default function FeedbackPage({ ownerId: propOwnerId }) {
 
   const t = translations[lang];
 
-  // MOCK: load trạng thái dịch vụ (có thể thay bằng call API thực tế)
-  const statuses = [
-    { ownerId: "demo-restaurant", serviceActive: true, logo: null, bgImg: null, name:"Demo Restaurant", feedbackTitle:"Đánh giá dịch vụ", feedbackSubtitle:"Bạn cảm thấy dịch vụ thế nào?" },
-    // Thêm các business khác ở đây nếu cần
-  ];
-  const service = statuses.find((s) => s.ownerId === ownerId);
+  // =========================
+  // Load owner/service info từ Worker API
+  // =========================
+  useEffect(() => {
+    setLoading(true);
+    fetch(`https://feedback-pcs-api.vurossie297.workers.dev/api/business/${ownerId}`)
+      .then(res => {
+        if (!res.ok) throw new Error("Owner not found");
+        return res.json();
+      })
+      .then(data => {
+        setService({ ...data, serviceActive: true, feedbackTitle: "Đánh giá dịch vụ", feedbackSubtitle: "Bạn cảm thấy dịch vụ thế nào?" });
+      })
+      .catch(err => {
+        console.error(err);
+        setService(null);
+      })
+      .finally(() => setLoading(false));
+  }, [ownerId]);
+
+  if (loading) return <div style={styles.fullScreen}><div style={styles.centerBox}>Đang tải...</div></div>;
 
   if (!service || !service.serviceActive) {
-    return (
-      <div style={styles.fullScreen}>
-        <div style={styles.centerBox}>🚫 404 page error.</div>
-      </div>
-    );
+    return <div style={styles.fullScreen}><div style={styles.centerBox}>🚫 404 page error.</div></div>;
   }
 
   const validateEmail = (value) => /^[^\s@]+@[^\s@]+\.[a-zA-Z]{2,}$/.test(value);
-
-  const handleEmailChange = (value) => {
-    setEmail(value);
-    setEmailError(validateEmail(value) ? "" : t.emailError);
-  };
-
-  const handleContentChange = (value) => {
-    setContent(value);
-    setContentError(value.trim() ? "" : t.contentError);
-  };
-
-  const handleChoose = (type) => {
-    setSelected(type);
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  };
+  const handleEmailChange = (value) => { setEmail(value); setEmailError(validateEmail(value)? "": t.emailError); };
+  const handleContentChange = (value) => { setContent(value); setContentError(value.trim()? "": t.contentError); };
+  const handleChoose = (type) => { setSelected(type); window.scrollTo({ top:0, behavior:"smooth" }); };
 
   const handleSubmit = async () => {
     if (!validateEmail(email)) { setEmailError(t.emailError); return; }
@@ -146,8 +148,8 @@ export default function FeedbackPage({ ownerId: propOwnerId }) {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             slug: ownerId,
-            rating: selected === "bad" ? stars : 5,
-            comment: selected === "good" ? "Positive feedback" : content,
+            rating: selected==="bad"? stars : 5,
+            comment: selected==="good"? "Positive feedback" : content,
           }),
         }
       );
@@ -155,11 +157,7 @@ export default function FeedbackPage({ ownerId: propOwnerId }) {
       console.log(data);
 
       if (selected === "good") window.location.href = "https://google.com";
-      else {
-        setShowThanks(true);
-        setEmail(""); setContent(""); setStars(1); setSelected(null);
-        window.scrollTo({ top: 0, behavior: "smooth" });
-      }
+      else { setShowThanks(true); setEmail(""); setContent(""); setStars(1); setSelected(null); window.scrollTo({ top:0, behavior:"smooth" }); }
     } catch (error) { console.error(error); alert("API error"); }
   };
 
@@ -170,7 +168,7 @@ export default function FeedbackPage({ ownerId: propOwnerId }) {
     <div style={styles.fullScreen}>
       <div style={styles.container}>
         {/* CARD DỊCH VỤ */}
-        <div style={{...styles.card, ...styles.serviceCard, backgroundImage: service.bgImg ? `url(${service.bgImg})` : "none"}}>
+        <div style={{...styles.card, ...styles.serviceCard, backgroundImage: service.bgImg? `url(${service.bgImg})`:"none"}}>
           <div style={styles.logoWrapper}>
             {service.logo ? <img src={service.logo} alt="Logo" style={styles.logo} /> : <div style={styles.logoPlaceholder}>Logo</div>}
           </div>
@@ -188,27 +186,27 @@ export default function FeedbackPage({ ownerId: propOwnerId }) {
         </div>
 
         {/* GOOD */}
-        {selected === "good" && (
+        {selected==="good" && (
           <div ref={goodRef} style={styles.card}>
-            <h3 style={{ color: "#16a34a" }}>{t.goodTitle}</h3>
-            <input placeholder={t.emailPlaceholder} value={email} onChange={(e) => handleEmailChange(e.target.value)} className={`input-field ${emailError ? "input-error" : ""}`} />
+            <h3 style={{ color:"#16a34a" }}>{t.goodTitle}</h3>
+            <input placeholder={t.emailPlaceholder} value={email} onChange={(e)=>handleEmailChange(e.target.value)} className={`input-field ${emailError?"input-error":""}`} />
             {emailError && <p style={styles.errorText}>{emailError}</p>}
             <button style={{...styles.primaryBtn, opacity:disableGood?0.6:1, pointerEvents:disableGood?"none":"auto"}} onClick={handleSubmit}>{t.nextBtn}</button>
           </div>
         )}
 
         {/* BAD */}
-        {selected === "bad" && (
+        {selected==="bad" && (
           <div ref={badRef} style={styles.card}>
-            <h3 style={{ color: "#dc2626" }}>{t.badTitle}</h3>
-            <div style={{ marginBottom: 20 }}>
-              {[1,2,3,4,5].map(n => (
-                <span key={n} onClick={() => setStars(n)} style={{ fontSize:34, cursor:"pointer", color: n<=stars?"#facc15":"#e5e7eb"}}>★</span>
+            <h3 style={{ color:"#dc2626" }}>{t.badTitle}</h3>
+            <div style={{ marginBottom:20 }}>
+              {[1,2,3,4,5].map(n=>(
+                <span key={n} onClick={()=>setStars(n)} style={{ fontSize:34, cursor:"pointer", color:n<=stars?"#facc15":"#e5e7eb"}}>★</span>
               ))}
             </div>
-            <input placeholder={t.emailPlaceholder} value={email} onChange={(e) => handleEmailChange(e.target.value)} className={`input-field ${emailError ? "input-error" : ""}`} />
+            <input placeholder={t.emailPlaceholder} value={email} onChange={(e)=>handleEmailChange(e.target.value)} className={`input-field ${emailError?"input-error":""}`} />
             {emailError && <p style={styles.errorText}>{emailError}</p>}
-            <textarea placeholder={t.contentPlaceholder} value={content} onChange={(e) => handleContentChange(e.target.value)} className={`input-field ${contentError ? "input-error" : ""}`} style={{ height:100 }} />
+            <textarea placeholder={t.contentPlaceholder} value={content} onChange={(e)=>handleContentChange(e.target.value)} className={`input-field ${contentError?"input-error":""}`} style={{ height:100 }} />
             {contentError && <p style={styles.errorText}>{contentError}</p>}
             <button style={{...styles.primaryBtn, opacity:disableBad?0.6:1, pointerEvents:disableBad?"none":"auto"}} onClick={handleSubmit}>{t.sendBtn}</button>
           </div>
@@ -220,7 +218,7 @@ export default function FeedbackPage({ ownerId: propOwnerId }) {
             <div style={styles.popup}>
               <h3>{t.popupTitle}</h3>
               <p>{t.popupSubtitle}</p>
-              <button style={styles.primaryBtn} onClick={() => setShowThanks(false)}>Đóng</button>
+              <button style={styles.primaryBtn} onClick={()=>setShowThanks(false)}>Đóng</button>
             </div>
           </div>
         )}
@@ -230,22 +228,22 @@ export default function FeedbackPage({ ownerId: propOwnerId }) {
 }
 
 const styles = {
-  fullScreen: { minHeight:"100dvh", background:"#fdfdfd", padding:"20px 16px" },
-  container: { maxWidth:480, margin:"0 auto", display:"flex", flexDirection:"column", gap:30 },
-  card: { background:"white", borderRadius:20, padding:28, boxShadow:"0 8px 24px rgba(0,0,0,0.06)" },
-  title: { textAlign:"center", marginBottom:12, fontSize:20 },
-  subtitle: { textAlign:"center", marginBottom:24, color:"#76797e", fontSize:15 },
-  row: { display:"flex", gap:16 },
-  goodBtn: (selected)=>({ flex:1,padding:16,borderRadius:999,fontWeight:600,cursor:"pointer",border:"2px solid #16a34a",background:selected==="good"?"#dcfce7":"#fff",color:"#16a34a" }),
-  badBtn: (selected)=>({ flex:1,padding:16,borderRadius:999,fontWeight:600,cursor:"pointer",border:"2px solid #dc2626",background:selected==="bad"?"#fee2e2":"#fff",color:"#dc2626" }),
-  primaryBtn: { width:"100%", padding:16, borderRadius:14, border:"none", background:"#5392f9", color:"white", fontWeight:600, cursor:"pointer" },
-  errorText: { color:"#dc2626", fontSize:14, marginBottom:10 },
-  centerBox: { maxWidth:480, margin:"0 auto", background:"white", padding:30, borderRadius:20, textAlign:"center" },
-  serviceCard: { display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", height:300, backgroundColor:"#e5e7eb", backgroundSize:"cover", backgroundPosition:"center", borderRadius:20, position:"relative", overflow:"hidden" },
-  logoWrapper: { width:80, height:80, borderRadius:"50%", overflow:"hidden", marginBottom:12, border:"2px solid white", display:"flex", justifyContent:"center", alignItems:"center", backgroundColor:"#fff" },
-  logo: { width:"100%", height:"100%", objectFit:"cover" },
-  logoPlaceholder: { fontSize:12, color:"#6b7280" },
-  serviceName: { color:"white", fontSize:20, fontWeight:600, textAlign:"center", textShadow:"0 1px 3px rgba(0,0,0,0.7)" },
-  popupOverlay: { position:"fixed", top:0, left:0, width:"100%", height:"100%", backgroundColor:"rgba(0,0,0,0.5)", display:"flex", justifyContent:"center", alignItems:"center", zIndex:9999 },
-  popup: { background:"#fff", borderRadius:20, padding:30, maxWidth:360, textAlign:"center", boxShadow:"0 8px 24px rgba(0,0,0,0.2)" },
+  fullScreen:{ minHeight:"100dvh", background:"#fdfdfd", padding:"20px 16px" },
+  container:{ maxWidth:480, margin:"0 auto", display:"flex", flexDirection:"column", gap:30 },
+  card:{ background:"white", borderRadius:20, padding:28, boxShadow:"0 8px 24px rgba(0,0,0,0.06)" },
+  title:{ textAlign:"center", marginBottom:12, fontSize:20 },
+  subtitle:{ textAlign:"center", marginBottom:24, color:"#76797e", fontSize:15 },
+  row:{ display:"flex", gap:16 },
+  goodBtn:(selected)=>({ flex:1,padding:16,borderRadius:999,fontWeight:600,cursor:"pointer",border:"2px solid #16a34a",background:selected==="good"?"#dcfce7":"#fff",color:"#16a34a" }),
+  badBtn:(selected)=>({ flex:1,padding:16,borderRadius:999,fontWeight:600,cursor:"pointer",border:"2px solid #dc2626",background:selected==="bad"?"#fee2e2":"#fff",color:"#dc2626" }),
+  primaryBtn:{ width:"100%", padding:16, borderRadius:14, border:"none", background:"#5392f9", color:"white", fontWeight:600, cursor:"pointer" },
+  errorText:{ color:"#dc2626", fontSize:14, marginBottom:10 },
+  centerBox:{ maxWidth:480, margin:"0 auto", background:"white", padding:30, borderRadius:20, textAlign:"center" },
+  serviceCard:{ display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", height:300, backgroundColor:"#e5e7eb", backgroundSize:"cover", backgroundPosition:"center", borderRadius:20, position:"relative", overflow:"hidden" },
+  logoWrapper:{ width:80, height:80, borderRadius:"50%", overflow:"hidden", marginBottom:12, border:"2px solid white", display:"flex", justifyContent:"center", alignItems:"center", backgroundColor:"#fff" },
+  logo:{ width:"100%", height:"100%", objectFit:"cover" },
+  logoPlaceholder:{ fontSize:12, color:"#6b7280" },
+  serviceName:{ color:"white", fontSize:20, fontWeight:600, textAlign:"center", textShadow:"0 1px 3px rgba(0,0,0,0.7)" },
+  popupOverlay:{ position:"fixed", top:0,left:0,width:"100%",height:"100%", backgroundColor:"rgba(0,0,0,0.5)", display:"flex", justifyContent:"center", alignItems:"center", zIndex:9999 },
+  popup:{ background:"#fff", borderRadius:20, padding:30, maxWidth:360, textAlign:"center", boxShadow:"0 8px 24px rgba(0,0,0,0.2)" },
 };
