@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { loadRequests, saveRequests, loadStatus, saveStatus, loadOwners, saveOwners } from "./storage";
 import "./DashboardAdmin.css"; // CSS hover + modal
-import { syncOwnerToWorker } from "./dashboardAdminExtras";
 
 
 export default function DashboardAdmin() {
