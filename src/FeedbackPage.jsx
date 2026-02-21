@@ -112,7 +112,7 @@ export default function FeedbackPage({ ownerId: propOwnerId }) {
   if (!service || !service.serviceActive) {
     return (
       <div style={styles.fullScreen}>
-        <div style={styles.centerBox}>🚫 404 error.</div>
+        <div style={styles.centerBox}>🚫 404 page error.</div>
       </div>
     );
   }
@@ -230,11 +230,11 @@ export default function FeedbackPage({ ownerId: propOwnerId }) {
 }
 
 const styles = {
-  fullScreen: { minHeight:"100vh", background:"#f3f4f6", padding:"30px 16px" },
-  container: { maxWidth:480, margin:"0 auto", display:"flex", flexDirection:"column", gap:24 },
+  fullScreen: { minHeight:"100dvh", background:"#fdfdfd", padding:"20px 16px" },
+  container: { maxWidth:480, margin:"0 auto", display:"flex", flexDirection:"column", gap:30 },
   card: { background:"white", borderRadius:20, padding:28, boxShadow:"0 8px 24px rgba(0,0,0,0.06)" },
   title: { textAlign:"center", marginBottom:12, fontSize:20 },
-  subtitle: { textAlign:"center", marginBottom:24, color:"#6b7280", fontSize:15 },
+  subtitle: { textAlign:"center", marginBottom:24, color:"#76797e", fontSize:15 },
   row: { display:"flex", gap:16 },
   goodBtn: (selected)=>({ flex:1,padding:16,borderRadius:999,fontWeight:600,cursor:"pointer",border:"2px solid #16a34a",background:selected==="good"?"#dcfce7":"#fff",color:"#16a34a" }),
   badBtn: (selected)=>({ flex:1,padding:16,borderRadius:999,fontWeight:600,cursor:"pointer",border:"2px solid #dc2626",background:selected==="bad"?"#fee2e2":"#fff",color:"#dc2626" }),

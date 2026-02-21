@@ -37,6 +37,6 @@
 }
 @media (max-width: 480px) {
   .fullScreen {
-    padding-top: 24px; /* khoảng cách vừa đủ trên mobile */
+    padding-top: 20px; /* khoảng cách vừa đủ trên mobile */
   }
 }
