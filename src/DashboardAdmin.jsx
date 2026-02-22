@@ -62,30 +62,33 @@ export default function DashboardAdmin() {
     setStatusList(updatedStatus);
     saveStatus(updatedStatus);
 
-    // ✅ Bổ sung: Sync Owner lên Worker để feedback page live
-    syncOwnerToWorker(newStatus);
-
     showSuccess(`✅ Tạo Owner thành công: ${newOwnerId}`);
     setShowCreateModal(false);
 
-    // === BỔ SUNG API CALL để Owner live luôn ===
     try {
-      await fetch("https://feedback-pcs-api.vurossie297.workers.dev/api/business", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          slug: newOwnerId,      // dùng ownerId làm slug
-          name: newOwnerId,      // tạm thời cho name giống slug
-          type: "restaurant"     // hoặc loại bạn muốn
-        }),
-      });
+      const response = await fetch(
+        "https://feedback-pcs-api.vurossie297.workers.dev/api/business",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            slug: newOwnerId,
+            name: newOwnerId,
+            type: "restaurant"
+          }),
+        }
+      );
 
-      console.log(`Owner ${newOwnerId} đã tạo trong businesses.`);
+      const data = await response.text();
+      console.log("STATUS:", response.status);
+      console.log("RESPONSE:", data);
+
     } catch (err) {
-      console.error("Lỗi khi tạo business:", err);
+      console.error("Lỗi:", err);
     }
-    // === END BỔ SUNG ===
   };
+
+
   const handleApprove = (req) => {
     setRequests(prev => {
       const updated = prev.map(r => r.ownerId === req.ownerId ? { ...r, status: "approved" } : r);
