@@ -11,19 +11,15 @@ export default function DashboardOwner() {
   const [requestSent, setRequestSent] = useState(false);
 
   const [feedbacks, setFeedbacks] = useState([]);
-  const [status, setStatus] = useState({
-    serviceActive: false,
-    packageActive: false,
-    name: "",
-    type: "restaurant",
-  });
+  const [upgradeRequests, setUpgradeRequests] = useState([]);
+  const [status, setStatus] = useState({ serviceActive: false, packageActive: false });
 
   const [filter, setFilter] = useState("all");
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
 
   // ================================
-  // FETCH STATUS & FEEDBACKS
+  // FETCH STATUS & FEEDBACKS & UPGRADE REQUESTS
   // ================================
   useEffect(() => {
     // Lấy status owner
@@ -46,6 +42,14 @@ export default function DashboardOwner() {
       .then(res => res.json())
       .then(data => setFeedbacks(Array.isArray(data) ? data : []))
       .catch(err => console.error("Fetch feedback error:", err));
+
+    // Lấy upgrade requests
+    fetch(`https://feedback-pcs-api.vurossie297.workers.dev/api/upgrade-request/${ownerId}`)
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data)) setUpgradeRequests(data);
+      })
+      .catch(err => console.error("Fetch upgrade requests error:", err));
   }, [ownerId]);
 
   // ================================
@@ -74,6 +78,12 @@ export default function DashboardOwner() {
       if (res.ok) {
         setRequestSent(true);
         setModalMessage("✅ Yêu cầu đã được gửi. Admin sẽ liên hệ bạn.");
+
+        // Cập nhật danh sách yêu cầu ngay
+        setUpgradeRequests(prev => [
+          ...prev,
+          { business_slug: ownerId, name: status.name, type: status.type, status: "pending", created_at: new Date().toISOString() }
+        ]);
       } else {
         const err = await res.json();
         setModalMessage(`❌ Lỗi: ${err?.error || "Không gửi được yêu cầu"}`);
@@ -100,6 +110,19 @@ export default function DashboardOwner() {
         <button className="send-service-btn" onClick={sendUpgradeRequest}>
           🚀 Gửi yêu cầu
         </button>
+
+        {upgradeRequests.length > 0 && (
+          <div className="upgrade-list">
+            <h4>📄 Yêu cầu đã gửi:</h4>
+            <ul>
+              {upgradeRequests.map((r, idx) => (
+                <li key={idx}>
+                  {new Date(r.created_at).toLocaleString()} – <b>{r.status}</b>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
 
         {modalOpen && (
           <div className="modal-overlay">
@@ -187,7 +210,7 @@ export default function DashboardOwner() {
             return (
               <tr key={idx}>
                 <td>{f.rating >= 1 ? "👍" : "👎"}</td>
-                <td>{"⭐".repeat(f.rating)}</td>
+                <td>{"🔒".repeat(f.rating)}</td>
                 <td>{f.rating < 1 && !canViewDetail ? "🔒 Nâng cấp gói để xem chi tiết" : f.comment}</td>
                 <td>{dateObj.toLocaleDateString()}</td>
                 <td>{dateObj.toLocaleTimeString()}</td>
@@ -196,6 +219,19 @@ export default function DashboardOwner() {
           })}
         </tbody>
       </table>
+
+      {upgradeRequests.length > 0 && (
+        <div className="upgrade-list">
+          <h4>📄 Yêu cầu nâng cấp đã gửi:</h4>
+          <ul>
+            {upgradeRequests.map((r, idx) => (
+              <li key={idx}>
+                {new Date(r.created_at).toLocaleString()} – <b>{r.status}</b>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {modalOpen && (
         <div className="modal-overlay">
