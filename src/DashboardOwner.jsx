@@ -22,6 +22,8 @@ export default function DashboardOwner() {
   // FETCH STATUS & FEEDBACKS & UPGRADE REQUESTS
   // ================================
   useEffect(() => {
+    if (!ownerId) return;
+
     // Lấy status owner
     fetch(`https://feedback-pcs-api.vurossie297.workers.dev/api/business/${ownerId}`)
       .then(res => res.json())
@@ -82,7 +84,7 @@ export default function DashboardOwner() {
         // Cập nhật danh sách yêu cầu ngay
         setUpgradeRequests(prev => [
           ...prev,
-          { business_slug: ownerId, name: status.name, type: status.type, status: "pending", created_at: new Date().toISOString() }
+          { slug: ownerId, name: status.name, type: status.type, status: "pending", createdAt: new Date().toISOString() }
         ]);
       } else {
         const err = await res.json();
@@ -117,7 +119,7 @@ export default function DashboardOwner() {
             <ul>
               {upgradeRequests.map((r, idx) => (
                 <li key={idx}>
-                  {new Date(r.created_at).toLocaleString()} – <b>{r.status}</b>
+                  {new Date(r.createdAt).toLocaleString()} – <b>{r.status}</b>
                 </li>
               ))}
             </ul>
@@ -153,7 +155,7 @@ export default function DashboardOwner() {
       if (filter === "good" && type !== "good") return false;
       if (filter === "bad" && type !== "bad") return false;
 
-      const d = new Date(fb.created_at);
+      const d = new Date(fb.created_at || fb.createdAt);
       if (fromDate && d < new Date(fromDate + "T00:00:00")) return false;
       if (toDate && d > new Date(toDate + "T23:59:59")) return false;
 
@@ -206,7 +208,7 @@ export default function DashboardOwner() {
         </thead>
         <tbody>
           {filtered.map((f, idx) => {
-            const dateObj = new Date(f.created_at);
+            const dateObj = new Date(f.created_at || f.createdAt);
             return (
               <tr key={idx}>
                 <td>{f.rating >= 1 ? "👍" : "👎"}</td>
@@ -226,7 +228,7 @@ export default function DashboardOwner() {
           <ul>
             {upgradeRequests.map((r, idx) => (
               <li key={idx}>
-                {new Date(r.created_at).toLocaleString()} – <b>{r.status}</b>
+                {new Date(r.createdAt).toLocaleString()} – <b>{r.status}</b>
               </li>
             ))}
           </ul>
