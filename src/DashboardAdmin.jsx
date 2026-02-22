@@ -160,11 +160,7 @@ export default function DashboardAdmin() {
             <h3>Tạo Owner mới</h3>
             <input placeholder="Slug" value={newOwner.slug} onChange={e => setNewOwner(prev => ({ ...prev, slug: e.target.value }))} />
             <input placeholder="Tên" value={newOwner.name} onChange={e => setNewOwner(prev => ({ ...prev, name: e.target.value }))} />
-            <select value={newOwner.type} onChange={e => setNewOwner(prev => ({ ...prev, type: e.target.value }))}>
-              <option value="restaurant">Restaurant</option>
-              <option value="hotel">Hotel</option>
-              <option value="other">Other</option>
-            </select>
+            <input placeholder="Loại" value={newOwner.name} onChange={e => setNewOwner(prev => ({ ...prev, type: e.target.value }))} />
             <input placeholder="Login ID" value={newOwner.login_id} onChange={e => setNewOwner(prev => ({ ...prev, login_id: e.target.value }))} />
             <input placeholder="Password" type="password" value={newOwner.password} onChange={e => setNewOwner(prev => ({ ...prev, password: e.target.value }))} />
             <div className="modal-actions">
