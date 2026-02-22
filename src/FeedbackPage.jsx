@@ -1,4 +1,4 @@
-// FeedbackPage.jsx
+// FeedbackPage.jsx (LIVE)
 import { useParams } from "react-router-dom";
 import { useState, useEffect } from "react";
 import "./FeedbackPage.css";
@@ -24,7 +24,6 @@ export default function FeedbackPage() {
   const [showThanks, setShowThanks] = useState(false);
 
   useEffect(() => {
-    // Detect browser language
     const userLang = navigator.language || navigator.userLanguage;
     if(userLang.startsWith("vi")) setLang("vi");
     else if(userLang.startsWith("ja")) setLang("ja");
@@ -36,10 +35,9 @@ export default function FeedbackPage() {
   const t = translations[lang];
 
   useEffect(() => {
-    // Fetch service info from Worker API
     const fetchService = async () => {
       try {
-        const res = await fetch(`https://feedback-pcs-api.vurossie297.workers.dev/api/business/${ownerId}`);
+        const res = await fetch(`https://feedback-pcs.com/api/business/${ownerId}`);
         if(!res.ok) throw new Error("Service not found");
         const data = await res.json();
         if(!data.serviceActive) throw new Error("Service inactive");
@@ -84,18 +82,24 @@ export default function FeedbackPage() {
     }
 
     try {
-      const res = await fetch(`https://feedback-pcs-api.vurossie297.workers.dev/api/feedback`, {
+      const res = await fetch(`https://feedback-pcs.com/api/feedback`, {
         method:"POST",
         headers:{"Content-Type":"application/json"},
         body: JSON.stringify({
           slug: ownerId,
           rating: selected === "bad" ? stars : 5,
-          comment: selected === "good" ? "Positive feedback" : content
+          comment: selected === "good" ? "Positive feedback" : content,
+          email: email
         })
       });
       if(!res.ok) throw new Error("API error");
-      if(selected === "good") window.location.href = "https://google.com";
-      else setShowThanks(true);
+      if(selected === "good") {
+      // Redirect người dùng sau khi gửi good feedback
+      window.location.href = "https://google.com"; // hoặc lấy từ service.redirectUrl nếu admin cấu hình
+      } else {
+        // Popup cảm ơn cho bad feedback
+        setShowThanks(true);
+      }
       setEmail(""); setContent(""); setStars(1); setSelected(null);
       window.scrollTo({ top:0, behavior:"smooth" });
     } catch(err) {
@@ -104,95 +108,71 @@ export default function FeedbackPage() {
     }
   };
 
-  if(!service) return <div style={styles.fullScreen}>Loading...</div>;
-  if(service.inactive) return <div style={styles.fullScreen}><div style={styles.centerBox}>🚫 404 error.</div></div>;
+  if(!service) return <div className="feedback-loading">Loading...</div>;
+  if(service.inactive) return <div className="feedback-404">🚫 404 error.</div>;
 
   const disableGood = !validateEmail(email);
   const disableBad = !validateEmail(email) || !content.trim();
 
   return (
-    <div style={styles.fullScreen}>
-      <div style={styles.container}>
-        {/* Service Card */}
-        <div style={{...styles.card, ...styles.serviceCard, backgroundImage: service.bgImg ? `url(${service.bgImg})`:"none"}}>
-          <div style={styles.logoWrapper}>
-            {service.logo ? <img src={service.logo} alt="Logo" style={styles.logo}/> : <div style={styles.logoPlaceholder}>Logo</div>}
-          </div>
-          <h2 style={styles.serviceName}>{service.name || "Tên khách sạn/nhà hàng"}</h2>
+    <div className="feedback-page">
+      {/* Service Card */}
+      <div className="service-card" style={{backgroundImage: service.bgImg ? `url(${service.bgImg})`:"none"}}>
+        <div className="logo-wrapper">
+          {service.logo ? <img src={service.logo} alt="Logo" className="logo"/> : <div className="logo-placeholder">Logo</div>}
         </div>
-
-        {/* Feedback Choice */}
-        {!selected && (
-          <div style={styles.card}>
-            <h2 style={styles.title}>{service.feedbackTitle || "Đánh giá dịch vụ"}</h2>
-            <p style={styles.subtitle}>{service.feedbackSubtitle || "Bạn cảm thấy dịch vụ thế nào?"}</p>
-            <div style={styles.row}>
-              <button style={styles.badBtn(selected)} onClick={()=>handleChoose("bad")}>{t.badBtn}</button>
-              <button style={styles.goodBtn(selected)} onClick={()=>handleChoose("good")}>{t.goodBtn}</button>
-            </div>
-          </div>
-        )}
-
-        {/* GOOD Feedback */}
-        {selected==="good" && (
-          <div style={styles.card}>
-            <h3 style={{color:"#16a34a"}}>{t.goodTitle}</h3>
-            <input placeholder={t.emailPlaceholder} value={email} onChange={e=>handleEmailChange(e.target.value)} className={`input-field ${emailError?"input-error":""}`} />
-            {emailError && <p style={styles.errorText}>{emailError}</p>}
-            <button style={{...styles.primaryBtn, opacity:disableGood?0.6:1, pointerEvents:disableGood?"none":"auto"}} onClick={handleSubmit}>{t.nextBtn}</button>
-          </div>
-        )}
-
-        {/* BAD Feedback */}
-        {selected==="bad" && (
-          <div style={styles.card}>
-            <h3 style={{color:"#dc2626"}}>{t.badTitle}</h3>
-            <div style={{marginBottom:20}}>
-              {[1,2,3,4,5].map(n=>(
-                <span key={n} onClick={()=>setStars(n)} style={{fontSize:34, cursor:"pointer", color:n<=stars?"#facc15":"#e5e7eb"}}>★</span>
-              ))}
-            </div>
-            <input placeholder={t.emailPlaceholder} value={email} onChange={e=>handleEmailChange(e.target.value)} className={`input-field ${emailError?"input-error":""}`} />
-            {emailError && <p style={styles.errorText}>{emailError}</p>}
-            <textarea placeholder={t.contentPlaceholder} value={content} onChange={e=>handleContentChange(e.target.value)} className={`input-field ${contentError?"input-error":""}`} style={{height:100}}/>
-            {contentError && <p style={styles.errorText}>{contentError}</p>}
-            <button style={{...styles.primaryBtn, opacity:disableBad?0.6:1, pointerEvents:disableBad?"none":"auto"}} onClick={handleSubmit}>{t.sendBtn}</button>
-          </div>
-        )}
-
-        {/* Popup Thanks */}
-        {showThanks && (
-          <div style={styles.popupOverlay}>
-            <div style={styles.popup}>
-              <h3>{t.popupTitle}</h3>
-              <p>{t.popupSubtitle}</p>
-              <button style={styles.primaryBtn} onClick={()=>setShowThanks(false)}>Đóng</button>
-            </div>
-          </div>
-        )}
-
+        <h2 className="service-name">{service.name || "Tên dịch vụ"}</h2>
       </div>
+
+      {/* Feedback Choice */}
+      {!selected && (
+        <div className="feedback-card">
+          <h2 className="feedback-title">{service.feedbackTitle || "Đánh giá dịch vụ"}</h2>
+          <p className="feedback-subtitle">{service.feedbackSubtitle || "Bạn cảm thấy dịch vụ thế nào?"}</p>
+          <div className="feedback-row">
+            <button className={`bad-btn ${selected==="bad"?"active":""}`} onClick={()=>handleChoose("bad")}>{t.badBtn}</button>
+            <button className={`good-btn ${selected==="good"?"active":""}`} onClick={()=>handleChoose("good")}>{t.goodBtn}</button>
+          </div>
+        </div>
+      )}
+
+      {/* GOOD Feedback */}
+      {selected==="good" && (
+        <div className="feedback-card">
+          <h3 className="good-title">{t.goodTitle}</h3>
+          <input placeholder={t.emailPlaceholder} value={email} onChange={e=>handleEmailChange(e.target.value)} className={`input-field ${emailError?"input-error":""}`} />
+          {emailError && <p className="error-text">{emailError}</p>}
+          <button className="primary-btn" disabled={disableGood} onClick={handleSubmit}>{t.nextBtn}</button>
+        </div>
+      )}
+
+      {/* BAD Feedback */}
+      {selected==="bad" && (
+        <div className="feedback-card">
+          <h3 className="bad-title">{t.badTitle}</h3>
+          <div className="stars-row">
+            {[1,2,3,4,5].map(n=>(
+              <span key={n} onClick={()=>setStars(n)} className={`star ${n<=stars?"active":"inactive"}`}>★</span>
+            ))}
+          </div>
+          <input placeholder={t.emailPlaceholder} value={email} onChange={e=>handleEmailChange(e.target.value)} className={`input-field ${emailError?"input-error":""}`} />
+          {emailError && <p className="error-text">{emailError}</p>}
+          <textarea placeholder={t.contentPlaceholder} value={content} onChange={e=>handleContentChange(e.target.value)} className={`input-field ${contentError?"input-error":""}`} style={{height:100}}/>
+          {contentError && <p className="error-text">{contentError}</p>}
+          <button className="primary-btn" disabled={disableBad} onClick={handleSubmit}>{t.sendBtn}</button>
+        </div>
+      )}
+
+      {/* Popup Thanks */}
+      {showThanks && (
+        <div className="popup-overlay">
+          <div className="popup">
+            <h3>{t.popupTitle}</h3>
+            <p>{t.popupSubtitle}</p>
+            <button className="primary-btn" onClick={()=>setShowThanks(false)}>Đóng</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
-
-const styles = {
-  fullScreen:{minHeight:"100vh", background:"#f3f4f6", padding:"30px 16px"},
-  container:{maxWidth:480, margin:"0 auto", display:"flex", flexDirection:"column", gap:24},
-  card:{background:"white", borderRadius:20, padding:28, boxShadow:"0 8px 24px rgba(0,0,0,0.06)"},
-  title:{textAlign:"center", marginBottom:12, fontSize:20},
-  subtitle:{textAlign:"center", marginBottom:24, color:"#6b7280", fontSize:15},
-  row:{display:"flex", gap:16},
-  goodBtn:(selected)=>({flex:1, padding:16, borderRadius:999, fontWeight:600, cursor:"pointer", border:"2px solid #16a34a", background:selected==="good"?"#dcfce7":"#fff", color:"#16a34a"}),
-  badBtn:(selected)=>({flex:1, padding:16, borderRadius:999, fontWeight:600, cursor:"pointer", border:"2px solid #dc2626", background:selected==="bad"?"#fee2e2":"#fff", color:"#dc2626"}),
-  primaryBtn:{width:"100%", padding:16, borderRadius:14, border:"none", background:"#5392f9", color:"white", fontWeight:600, cursor:"pointer"},
-  errorText:{color:"#dc2626", fontSize:14, marginBottom:10},
-  centerBox:{maxWidth:480, margin:"0 auto", background:"white", padding:30, borderRadius:20, textAlign:"center"},
-  serviceCard:{display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", height:300, backgroundColor:"#e5e7eb", backgroundSize:"cover", backgroundPosition:"center", borderRadius:20, position:"relative", overflow:"hidden"},
-  logoWrapper:{width:80,height:80,borderRadius:"50%",overflow:"hidden",marginBottom:12,border:"2px solid white",display:"flex",justifyContent:"center",alignItems:"center",backgroundColor:"#fff"},
-  logo:{width:"100%",height:"100%",objectFit:"cover"},
-  logoPlaceholder:{fontSize:12,color:"#6b7280"},
-  serviceName:{color:"white", fontSize:20, fontWeight:600, textAlign:"center", textShadow:"0 1px 3px rgba(0,0,0,0.7)"},
-  popupOverlay:{position:"fixed",top:0,left:0,width:"100%",height:"100%",backgroundColor:"rgba(0,0,0,0.5)",display:"flex",justifyContent:"center",alignItems:"center",zIndex:9999},
-  popup:{background:"#fff",borderRadius:20,padding:30,maxWidth:360,textAlign:"center",boxShadow:"0 8px 24px rgba(0,0,0,0.2)"},
-};

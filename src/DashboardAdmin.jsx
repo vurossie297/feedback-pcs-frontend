@@ -1,8 +1,8 @@
-// DashboardAdmin.jsx
+// DashboardAdminLive.jsx
 import React, { useState, useEffect } from "react";
 import "./DashboardAdmin.css";
 
-export default function DashboardAdmin() {
+export default function DashboardAdminLive() {
   const [ownerList, setOwnerList] = useState([]);
   const [requests, setRequests] = useState([]);
   const [statusList, setStatusList] = useState([]);
@@ -29,11 +29,11 @@ export default function DashboardAdmin() {
   const [newOwnerPass, setNewOwnerPass] = useState("");
 
   // =========================
-  // FETCH DATA
+  // FETCH DATA LIVE
   // =========================
   const fetchOwners = async () => {
     try {
-      const res = await fetch("/api/business/all");
+      const res = await fetch("https://feedback-pcs.com/api/business/all");
       const data = await res.json();
       setOwnerList(data || []);
     } catch (err) {
@@ -43,7 +43,7 @@ export default function DashboardAdmin() {
 
   const fetchRequests = async () => {
     try {
-      const res = await fetch("/api/upgrade-request");
+      const res = await fetch("https://feedback-pcs.com/api/upgrade-request");
       const data = await res.json();
       setRequests(data || []);
     } catch (err) {
@@ -53,7 +53,7 @@ export default function DashboardAdmin() {
 
   const fetchStatus = async () => {
     try {
-      const res = await fetch("/api/status/all");
+      const res = await fetch("https://feedback-pcs.com/api/status/all");
       const data = await res.json();
       setStatusList(data || []);
     } catch (err) {
@@ -68,7 +68,7 @@ export default function DashboardAdmin() {
   }, []);
 
   // =========================
-  // CREATE OWNER
+  // CREATE OWNER LIVE
   // =========================
   const openCreateModal = () => {
     setNewSlug("");
@@ -80,14 +80,13 @@ export default function DashboardAdmin() {
   };
 
   const handleCreateOwnerFromModal = async () => {
-    if (!newSlug) return alert("Slug không được để trống");
+    if (!newSlug || !newName || !newOwnerId || !newOwnerPass) {
+      return alert("Vui lòng điền đầy đủ thông tin!");
+    }
     if (ownerList.find(o => o.slug === newSlug)) return alert("Slug đã tồn tại!");
-    if (!newName) return alert("Tên không được để trống");
-    if (!newOwnerId) return alert("ID login không được để trống");
-    if (!newOwnerPass) return alert("Password không được để trống");
 
     try {
-      const res = await fetch("/api/business", {
+      const res = await fetch("https://feedback-pcs.com/api/business", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -111,11 +110,11 @@ export default function DashboardAdmin() {
   };
 
   // =========================
-  // APPROVE / REJECT REQUEST
+  // APPROVE / REJECT REQUEST LIVE
   // =========================
   const handleApprove = async (req) => {
     try {
-      const res = await fetch("/api/upgrade-request/approve", {
+      const res = await fetch("https://feedback-pcs.com/api/upgrade-request/approve", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ slug: req.slug }),
@@ -140,7 +139,7 @@ export default function DashboardAdmin() {
   const handleConfirmReject = async () => {
     if (!rejectReason) return alert("Vui lòng nhập lý do từ chối");
     try {
-      const res = await fetch("/api/upgrade-request/reject", {
+      const res = await fetch("https://feedback-pcs.com/api/upgrade-request/reject", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ slug: ownerToReject, note: rejectReason }),
@@ -157,12 +156,12 @@ export default function DashboardAdmin() {
   };
 
   // =========================
-  // TOGGLE SERVICE / PACKAGE
+  // TOGGLE SERVICE / PACKAGE LIVE
   // =========================
   const toggleService = async (slug) => {
     try {
       const s = statusList.find(s => s.slug === slug);
-      const res = await fetch(`/api/status/${slug}`, {
+      const res = await fetch(`https://feedback-pcs.com/api/status/${slug}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ serviceActive: !s.serviceActive }),
@@ -178,7 +177,7 @@ export default function DashboardAdmin() {
   const togglePackage = async (slug) => {
     try {
       const s = statusList.find(s => s.slug === slug);
-      const res = await fetch(`/api/status/${slug}`, {
+      const res = await fetch(`https://feedback-pcs.com/api/status/${slug}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ packageActive: !s.packageActive }),
@@ -192,7 +191,7 @@ export default function DashboardAdmin() {
   };
 
   // =========================
-  // EDIT OWNER
+  // EDIT OWNER LIVE
   // =========================
   const handleEditOwner = (slug) => {
     setEditingOwnerSlug(slug);
@@ -213,7 +212,7 @@ export default function DashboardAdmin() {
     if (bgFile) formData.append("bgImg", bgFile);
 
     try {
-      const res = await fetch(`/api/status/${editingOwnerSlug}`, {
+      const res = await fetch(`https://feedback-pcs.com/api/status/${editingOwnerSlug}`, {
         method: "PUT",
         body: formData
       });
@@ -231,7 +230,7 @@ export default function DashboardAdmin() {
   };
 
   // =========================
-  // DELETE OWNER
+  // DELETE OWNER LIVE
   // =========================
   const openDeleteModal = (slug) => {
     setOwnerToDelete(slug);
@@ -241,7 +240,7 @@ export default function DashboardAdmin() {
   const handleConfirmDelete = async () => {
     if (!ownerToDelete) return;
     try {
-      const res = await fetch(`/api/business/${ownerToDelete}`, { method: "DELETE" });
+      const res = await fetch(`https://feedback-pcs.com/api/business/${ownerToDelete}`, { method: "DELETE" });
       if (!res.ok) throw new Error("Xoá thất bại");
       showSuccess(`✅ Đã xoá Owner: ${ownerToDelete}`);
       setShowDeleteModal(false);
@@ -261,11 +260,11 @@ export default function DashboardAdmin() {
   };
 
   // =========================
-  // RENDER
+  // RENDER LIVE
   // =========================
   return (
     <div className="dashboard-container">
-      <h2 className="dashboard-title">PCS ADMIN</h2>
+      <h2 className="dashboard-title">PCS ADMIN (LIVE)</h2>
 
       <button className="create-owner-btn" onClick={openCreateModal}>➕ Tạo Owner mới</button>
 

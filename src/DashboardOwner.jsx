@@ -34,6 +34,7 @@ export default function DashboardOwner() {
             packageActive: data.packageActive ?? false,
             name: data.name ?? "",
             type: data.type ?? "restaurant",
+            redirectUrl: data.redirectUrl || "https://google.com"
           });
         }
       })
@@ -65,27 +66,18 @@ export default function DashboardOwner() {
     }
 
     try {
+      const now = new Date().toISOString();
+      const payload = { slug: ownerId, name: status.name, type: status.type, status: "pending", createdAt: now };
       const res = await fetch("https://feedback-pcs-api.vurossie297.workers.dev/api/upgrade-request", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          slug: ownerId,
-          name: status.name,
-          type: status.type,
-          status: "pending",
-          createdAt: new Date().toISOString()
-        }),
+        body: JSON.stringify(payload),
       });
 
       if (res.ok) {
         setRequestSent(true);
         setModalMessage("✅ Yêu cầu đã được gửi. Admin sẽ liên hệ bạn.");
-
-        // Cập nhật danh sách yêu cầu ngay
-        setUpgradeRequests(prev => [
-          ...prev,
-          { slug: ownerId, name: status.name, type: status.type, status: "pending", createdAt: new Date().toISOString() }
-        ]);
+        setUpgradeRequests(prev => [...prev, payload]);
       } else {
         const err = await res.json();
         setModalMessage(`❌ Lỗi: ${err?.error || "Không gửi được yêu cầu"}`);
@@ -175,6 +167,10 @@ export default function DashboardOwner() {
       <h2 className="center-text">Partner Control System</h2>
       <h2 className="owner-id-text">{ownerId}</h2>
 
+      <div className="redirect-info">
+        <b>Redirect URL good feedback:</b> {status.redirectUrl || "https://google.com"}
+      </div>
+
       <div className="filter-buttons">
         <button className="primary-btn" onClick={() => setFilter("all")}>Tất cả</button>
         <button className="primary-btn" onClick={() => setFilter("good")}>👍 Tốt</button>
@@ -209,11 +205,12 @@ export default function DashboardOwner() {
         <tbody>
           {filtered.map((f, idx) => {
             const dateObj = new Date(f.created_at || f.createdAt);
+            const type = f.rating >= 4 ? "good" : "bad";
             return (
               <tr key={idx}>
-                <td>{f.rating >= 1 ? "👍" : "👎"}</td>
-                <td>{"🔒".repeat(f.rating)}</td>
-                <td>{f.rating < 1 && !canViewDetail ? "🔒 Nâng cấp gói để xem chi tiết" : f.comment}</td>
+                <td>{type === "good" ? "👍" : "👎"}</td>
+                <td>{type === "good" ? "⭐".repeat(_) : "⭐".repeat(f.rating)}</td>
+                <td>{type === "bad" && !canViewDetail ? "🔒 Nâng cấp gói để xem chi tiết" : f.comment}</td>
                 <td>{dateObj.toLocaleDateString()}</td>
                 <td>{dateObj.toLocaleTimeString()}</td>
               </tr>
