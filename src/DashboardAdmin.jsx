@@ -70,7 +70,7 @@ export default function DashboardAdmin() {
 
     // === BỔ SUNG API CALL để Owner live luôn ===
     try {
-      await fetch("/api/business", {
+      await fetch("https://feedback-pcs-api.vurossie297.workers.dev/api/business", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
