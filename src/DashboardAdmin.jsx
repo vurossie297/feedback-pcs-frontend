@@ -70,23 +70,19 @@ export default function DashboardAdmin() {
 
     // === BỔ SUNG API CALL để Owner live luôn ===
     try {
-      // Tạo Owner trên server
-      await fetch("/api/owners", {
+      await fetch("/api/business", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: newOwnerId, password: newOwnerPass }),
+        body: JSON.stringify({
+          slug: newOwnerId,      // dùng ownerId làm slug
+          name: newOwnerId,      // tạm thời cho name giống slug
+          type: "restaurant"     // hoặc loại bạn muốn
+        }),
       });
 
-      // Tạo Status trên server
-      await fetch("/api/status", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(newStatus),
-      });
-
-      console.log(`Owner ${newOwnerId} live trên server.`);
+      console.log(`Owner ${newOwnerId} đã tạo trong businesses.`);
     } catch (err) {
-      console.error("Lỗi khi tạo Owner trên server:", err);
+      console.error("Lỗi khi tạo business:", err);
     }
     // === END BỔ SUNG ===
   };
@@ -239,6 +235,16 @@ export default function DashboardAdmin() {
         </div>
       )}
 
+      {showSuccessModal && (
+        <div className="modal-overlay">
+          <div className="modal">
+            <p>{successMessage}</p>
+            <div className="modal-actions">
+              <button className="primary-btn" onClick={() => setShowSuccessModal(false)}>OK</button>
+            </div>
+          </div>
+        </div>
+      )}
       <h3>Owner List</h3>
       <table className="table-hover">
         <thead>
