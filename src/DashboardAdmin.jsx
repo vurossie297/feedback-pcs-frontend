@@ -21,6 +21,7 @@ export default function DashboardAdmin() {
   const [rejectReason, setRejectReason] = useState("");
 
   const API_BASE = "https://feedback-pcs-api.vurossie297.workers.dev";
+  fetch(`${API_BASE}/api/requests/all`);
 
   // ================================
   // LOAD OWNERS + STATUS + REQUESTS
