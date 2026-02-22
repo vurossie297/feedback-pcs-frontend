@@ -1,4 +1,4 @@
-//DashboardAdmin.jsx
+// DashboardAdmin.jsx
 import React, { useState, useEffect } from "react";
 import { loadRequests, saveRequests, loadStatus, saveStatus, loadOwners, saveOwners } from "./storage";
 import "./DashboardAdmin.css"; // CSS hover + modal
@@ -23,6 +23,9 @@ export default function DashboardAdmin() {
 
   // Modal tạo Owner
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [newSlug, setNewSlug] = useState("");
+  const [newName, setNewName] = useState("");
+  const [newType, setNewType] = useState("restaurant");
   const [newOwnerId, setNewOwnerId] = useState("");
   const [newOwnerPass, setNewOwnerPass] = useState("");
 
@@ -33,17 +36,29 @@ export default function DashboardAdmin() {
   }, []);
 
   const openCreateModal = () => {
+    setNewSlug("");
+    setNewName("");
+    setNewType("restaurant");
     setNewOwnerId("");
     setNewOwnerPass("");
     setShowCreateModal(true);
   };
 
   const handleCreateOwnerFromModal = async () => {
-    if (!newOwnerId) return alert("ID không được để trống");
-    if (ownerList.find(o => o.id === newOwnerId)) return alert("Owner ID đã tồn tại!");
+    if (!newSlug) return alert("Slug không được để trống");
+    if (ownerList.find(o => o.slug === newSlug)) return alert("Slug đã tồn tại!");
+    if (!newName) return alert("Tên không được để trống");
+    if (!newOwnerId) return alert("ID login không được để trống");
     if (!newOwnerPass) return alert("Password không được để trống");
 
-    const newOwner = { id: newOwnerId, password: newOwnerPass };
+    const newOwner = {
+      id: newOwnerId,
+      password: newOwnerPass,
+      slug: newSlug,
+      name: newName,
+      type: newType
+    };
+
     const updatedOwners = [...ownerList, newOwner];
     setOwnerList(updatedOwners);
     saveOwners(updatedOwners);
@@ -52,7 +67,7 @@ export default function DashboardAdmin() {
       ownerId: newOwnerId, 
       serviceActive: false, 
       packageActive: false, 
-      name: "Tên khách sạn/nhà hàng", 
+      name: newName, 
       logo: "", 
       bgImg: "", 
       feedbackTitle: "Đánh giá dịch vụ", 
@@ -72,9 +87,9 @@ export default function DashboardAdmin() {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            slug: newOwnerId,
-            name: newOwnerId,
-            type: "restaurant"
+            slug: newSlug,
+            name: newName,
+            type: newType
           }),
         }
       );
@@ -87,7 +102,6 @@ export default function DashboardAdmin() {
       console.error("Lỗi:", err);
     }
   };
-
 
   const handleApprove = (req) => {
     setRequests(prev => {
@@ -106,7 +120,7 @@ export default function DashboardAdmin() {
 
   const openRejectModal = (ownerId) => {
     setOwnerToReject(ownerId);
-    setRejectReason(""); // reset
+    setRejectReason(""); 
     setShowRejectModal(true);
   };
   
@@ -214,21 +228,37 @@ export default function DashboardAdmin() {
     setShowSuccessModal(true);
   };
 
-  // --- RETURN JSX (giữ nguyên hoàn toàn) ---
   return (
     <div className="dashboard-container">
       <h2 className="dashboard-title">PCS ADMIN</h2>
 
       <button className="create-owner-btn" onClick={openCreateModal}>➕ Tạo Owner mới</button>
 
+      {/* MODAL TẠO OWNER */}
       {showCreateModal && (
         <div className="modal-overlay">
           <div className="modal">
             <h3>Tạo Owner mới</h3>
-            <label className="label-owner-id">Owner ID:</label>
+
+            <label>Slug:</label>
+            <input type="text" value={newSlug} onChange={e => setNewSlug(e.target.value)} />
+
+            <label>Tên:</label>
+            <input type="text" value={newName} onChange={e => setNewName(e.target.value)} />
+
+            <label>Loại:</label>
+            <select value={newType} onChange={e => setNewType(e.target.value)}>
+              <option value="restaurant">Restaurant</option>
+              <option value="hotel">Hotel</option>
+              <option value="other">Other</option>
+            </select>
+
+            <label>ID login:</label>
             <input type="text" value={newOwnerId} onChange={e => setNewOwnerId(e.target.value)} />
-            <label className="label-owner-pass">Password:</label>
+
+            <label>Password:</label>
             <input type="password" value={newOwnerPass} onChange={e => setNewOwnerPass(e.target.value)} />
+
             <div className="modal-actions">
               <button className="primary-btn" onClick={handleCreateOwnerFromModal}>Tạo</button>
               <button className="secondary-btn" onClick={() => setShowCreateModal(false)}>Hủy</button>
@@ -237,6 +267,7 @@ export default function DashboardAdmin() {
         </div>
       )}
 
+      {/* MODAL SUCCESS */}
       {showSuccessModal && (
         <div className="modal-overlay">
           <div className="modal">
@@ -247,11 +278,16 @@ export default function DashboardAdmin() {
           </div>
         </div>
       )}
+
+      {/* OWNER LIST */}
       <h3>Owner List</h3>
       <table className="table-hover">
         <thead>
           <tr>
-            <th>Owner ID</th>
+            <th>Slug</th>
+            <th>Tên</th>
+            <th>Loại</th>
+            <th>ID login</th>
             <th>Password</th>
             <th>Action</th>
           </tr>
@@ -259,6 +295,9 @@ export default function DashboardAdmin() {
         <tbody>
           {ownerList.map((o, idx) => (
             <tr key={idx}>
+              <td>{o.slug}</td>
+              <td>{o.name}</td>
+              <td>{o.type}</td>
               <td>{o.id}</td>
               <td>{o.password}</td>
               <td>
@@ -270,6 +309,7 @@ export default function DashboardAdmin() {
         </tbody>
       </table>
 
+      {/* MODAL DELETE */}
       {showDeleteModal && (
         <div className="modal-overlay">
           <div className="modal">
@@ -281,29 +321,9 @@ export default function DashboardAdmin() {
             </div>
           </div>
         </div>
-      )}    
-
-      {showSuccessModal && (
-        <div className="modal-overlay">
-          <div className="modal">
-            <p>{successMessage}</p>
-            <div className="modal-actions">
-              <button className="primary-btn" onClick={() => setShowSuccessModal(false)}>OK</button>
-            </div>
-          </div>
-        </div>
-      )}
-      {showRequestSuccessModal && (
-        <div className="modal-overlay">
-          <div className="modal">
-            <p>{requestSuccessMessage}</p>
-            <div className="modal-actions">
-              <button className="primary-btn" onClick={() => setShowRequestSuccessModal(false)}>OK</button>
-            </div>
-          </div>
-        </div>
       )}
 
+      {/* MODAL REJECT */}
       {showRejectModal && (
         <div className="modal-overlay">
           <div className="modal">
@@ -323,6 +343,7 @@ export default function DashboardAdmin() {
         </div>
       )}
 
+      {/* MODAL EDIT OWNER */}
       {editingOwnerId && serviceEditing && (
         <div className="edit-owner-form">
           <h3>Chỉnh sửa Owner: {editingOwnerId}</h3>
@@ -347,6 +368,7 @@ export default function DashboardAdmin() {
         </div>
       )}
 
+      {/* UPGRADE REQUESTS */}
       <h3>Upgrade Requests</h3>
       <table className="table-hover">
         <thead>
@@ -378,6 +400,7 @@ export default function DashboardAdmin() {
         </tbody>
       </table>
 
+      {/* SERVICE STATUS */}
       <h3>Service Status</h3>
       <table className="table-hover">
         <thead>

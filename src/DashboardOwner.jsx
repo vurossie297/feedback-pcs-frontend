@@ -221,7 +221,7 @@ export default function DashboardOwner() {
             return (
               <tr key={idx}>
                 <td>{f.rating >= 4 ? "👍" : "👎"}</td>
-                <td>{"⭐".repeat(f.rating)}</td>
+                <td>{"🔒".repeat(f.rating)}</td>
                 <td>
                   {f.rating < 4 && !canViewDetail
                     ? "🔒 Nâng cấp gói để xem chi tiết"

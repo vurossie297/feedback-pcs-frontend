@@ -125,7 +125,7 @@ export default function FeedbackPage({ ownerId: propOwnerId }) {
       .finally(() => setLoading(false));
   }, [ownerId]);
 
-  if (loading) return <div style={styles.fullScreen}><div style={styles.centerBox}>Đang tải...</div></div>;
+  if (loading) return <div style={styles.fullScreen}><div style={styles.centerBox}>Loading...</div></div>;
 
   if (!service || !service.serviceActive) {
     return <div style={styles.fullScreen}><div style={styles.centerBox}>🚫 404 page error.</div></div>;
